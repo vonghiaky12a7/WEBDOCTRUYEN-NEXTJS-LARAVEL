@@ -1,0 +1,12 @@
+*/node_modules/
+# .env
+vendor/
+storage/
+
+be_webdoctruyen/
+buoi4/
+buoi5/
+buoi6/
+Kiemtra_VoNghiaKy/
+webbanhang/
+.vscode/
