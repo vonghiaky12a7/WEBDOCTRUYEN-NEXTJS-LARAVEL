@@ -3,6 +3,6 @@ export interface Chapter {
   storyId: string;
   chapterNumber: number;
   title: string;
-  imageUrls: string | string[];
+  imageUrls: string[];
   createdAt: Date | string;
 }

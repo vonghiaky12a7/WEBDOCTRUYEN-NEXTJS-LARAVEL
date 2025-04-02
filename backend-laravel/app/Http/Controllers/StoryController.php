@@ -511,16 +511,16 @@ class StoryController extends Controller
 
         $request->validate([
             'title' => 'required|string',
-            'content' => 'required|string',
             'chapterNumber' => 'required|integer|min:1',
+            'imageUrls' => 'required|array',
         ]);
 
         $chapter = Chapter::create([
             'storyId' => $storyId,
             'title' => $request->title,
-            'content' => $request->content,
             'chapterNumber' => $request->chapterNumber,
             'chapterId' => Str::uuid()->toString(),
+            'imageUrls' => json_encode($request->imageUrls),
         ]);
 
         return response()->json([
@@ -544,12 +544,10 @@ class StoryController extends Controller
 
         $request->validate([
             'title' => 'string',
-            'content' => 'string',
             'chapterNumber' => 'integer|min:1',
         ]);
 
         if ($request->has('title')) $chapter->title = $request->title;
-        if ($request->has('content')) $chapter->content = $request->content;
         if ($request->has('chapterNumber')) $chapter->chapterNumber = $request->chapterNumber;
 
         $chapter->save();

@@ -10,20 +10,21 @@ use App\Http\Controllers\UploadController;
 // Auth routes
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login/mobile', [AuthController::class, 'loginMobile']);
     Route::post('/login', [AuthController::class, 'login'])->name('login');
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
-    Route::get('/verify-reset-token/{email}/{token}', [AuthController::class, 'verifyResetToken']);
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/verify-token', [AuthController::class, 'verifyToken']);
-
-
+    Route::prefix('auth')->group(
+        function () {
+            Route::get('/me', [AuthController::class, 'me']);
+            Route::post('/logout', [AuthController::class, 'logout']);
+            Route::post('/verify-token', [AuthController::class, 'verifyToken']);
+            Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+        }
+    );
     // User routes with admin middleware
     Route::middleware('admin')->prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
@@ -34,9 +35,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/upload/single', [UploadController::class, 'uploadSingleImage']);
 Route::post('/upload/multiple', [UploadController::class, 'uploadMultipleImages']);
-Route::get('/test-cloudinary-config', function () {
-    dd(config('cloudinary.cloud_url'));
-});
 
 // Public story routes
 Route::prefix('stories')->group(function () {

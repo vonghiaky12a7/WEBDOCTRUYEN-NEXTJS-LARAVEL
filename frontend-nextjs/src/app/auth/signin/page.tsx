@@ -50,7 +50,6 @@ export default function Signin() {
         description: "Đăng nhập thành công",
         color: "success",
         timeout: 2500,
-        shouldShowTimeoutProgress: true,
       });
       router.replace("/"); // Để middleware quyết định chuyển hướng
     } catch (error: any) {

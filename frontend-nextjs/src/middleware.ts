@@ -1,66 +1,93 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Định nghĩa các route cần bảo vệ và vai trò được phép truy cập
+// Define protected routes and allowed roles
 const protectedRoutes = [
-  { path: "/admin", allowedRoles: [1] }, // Chỉ admin (roleId: 1) được phép truy cập
-  { path: "/profile", allowedRoles: [1, 3] }, // Cho phép cả admin và reader
+  { path: "/admin", allowedRoles: [1] }, // Only admin (roleId: 1) can access
+  { path: "/profile", allowedRoles: [1, 3] }, // Both admin and reader can access
 ];
 
-// Định nghĩa các route liên quan đến xác thực
-const authRoutes = ["/auth/signin", "/auth/signup", "/auth/google/callback"];
+// Define authentication-related routes
+const authRoutes = ["/auth/signin", "/auth/register"];
 
-export default function middleware(request: NextRequest) {
+// Define the API endpoint for token verification
+const API_VERIFY_TOKEN_ENDPOINT = "http://localhost:8000/api/auth/verify-token"; // Replace with your actual API endpoint
+
+export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Kiểm tra xem route hiện tại có phải là route cần bảo vệ không
+  // Check if the current route is a protected route
   const protectedRoute = protectedRoutes.find(
     (route) => pathname === route.path || pathname.startsWith(`${route.path}/`)
   );
   const isProtectedRoute = Boolean(protectedRoute);
+
+  // Check if the current route is an authentication route
   const isAuthRoute = authRoutes.includes(pathname);
 
-  // Lấy giá trị của cookie 'laravel_session' và 'role_id'
-  const laravelSession = request.cookies.get("laravel_session")?.value;
-  const roleId = request.cookies.get("role_id")?.value;
+  // Get the token from the cookie
+  const token = request.cookies.get("auth_token")?.value;
 
-  console.log(
-    "🔹 Middleware: laravel_session:",
-    laravelSession ? "Exists" : "Not found"
-  );
-  console.log("🔹 Middleware: role_id:", roleId || "Not found");
+  console.log("🔹 Middleware: token:", token ? "Exists" : "Not found");
+  console.log("🔹 token:", token);
 
-  if (!laravelSession) {
-    // Nếu không có laravel_session, chặn truy cập vào các route cần bảo vệ
+  if (!token) {
+    // If no token, block access to protected routes
     if (isProtectedRoute) {
-      console.log(" Không có laravel_session, chuyển hướng đến /auth/signin");
+      console.log("🔴 No token found, redirecting to /auth/signin");
       return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
   } else {
-    const userRole = Number(roleId);
+    // If token exists, verify it with the backend API
+    try {
+      const response = await fetch(API_VERIFY_TOKEN_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (isAuthRoute) {
-      // Không cho phép truy cập trang đăng nhập khi đã đăng nhập
-      return NextResponse.redirect(
-        new URL(userRole === 1 ? "/admin/user" : "/", request.url)
-      );
-    }
+      const data = await response.json();
+      console.log("🔹 Response data:", data);
 
-    if (isProtectedRoute) {
-      // Kiểm tra quyền truy cập dựa trên role_id
-      const allowedRoles = protectedRoute?.allowedRoles || [];
-      if (!allowedRoles.includes(userRole)) {
-        console.log(
-          ` Không có quyền truy cập vào ${pathname}, chuyển hướng về trang chủ.`
-        );
-        return NextResponse.redirect(new URL("/", request.url));
+      if (response.ok) {
+        const user = data.user;
+        const userRole = user.roleId;
+        if (isAuthRoute) {
+          // If already logged in, redirect away from auth routes
+          console.log("🟢 Already logged in, redirecting to /");
+          return NextResponse.redirect(new URL("/", request.url));
+        }
+
+        if (isProtectedRoute) {
+          // Check access based on role
+          const allowedRoles = protectedRoute?.allowedRoles || [];
+          if (!allowedRoles.includes(userRole)) {
+            console.log(`🔴 No access to ${pathname}, redirecting to /`);
+            return NextResponse.redirect(new URL("/", request.url));
+          }
+        }
+      } else {
+        // Token is invalid
+        console.log("🔴 Invalid token, redirecting to /auth/signin");
+        return NextResponse.redirect(new URL("/auth/signin", request.url));
       }
+    } catch (error) {
+      // Network error or API error
+      console.error("🔴 Error verifying token:", error);
+      return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
   }
 
+  // Allow access if none of the above conditions are met
   return NextResponse.next();
 }
 
-// Cấu hình matcher cho Middleware
+// Middleware configuration
 export const config = {
-  matcher: ["/admin/:path*", "/profile/:path*", "/auth/:path*", "/"],
+  matcher: [
+    "/admin/:path*",
+    "/profile/:path*",
+    "/auth/signin",
+    "/auth/register",
+  ],
 };

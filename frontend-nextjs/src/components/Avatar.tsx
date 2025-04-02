@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { DEFAULT_AVATAR } from "@/constants/images";
-
+import { addToast } from "@heroui/react";
 
 export default function Avatar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +19,12 @@ export default function Avatar() {
     try {
       await logout();
       setIsOpen(false);
+      addToast({
+        title: "Success",
+        description: "Đăng xuất thành công",
+        color: "success",
+        timeout: 2500,
+      });
       router.push("/"); // Chuyển hướng về trang chủ sau khi logout
     } catch (error: any) {
       console.error("Logout failed:", error);
