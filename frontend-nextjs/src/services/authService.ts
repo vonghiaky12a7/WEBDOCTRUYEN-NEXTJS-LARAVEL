@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // services/authService.ts
-
 import { useAuthStore } from "@/stores/authStore";
 import axiosInstance from "@/utils/axiosInstance";
-
 
 export const authService = {
   login: async (formData: FormData) => {
     const response = await axiosInstance.post("/api/auth/login", formData);
-    return response;
+    const user = response.data.user; // Get user from response
+    return { user }; //return user
   },
 
   signup: async (formData: FormData) => {
@@ -25,7 +24,7 @@ export const authService = {
 
   logout: async () => {
     await axiosInstance
-      .post("/api/logout")
+      .post("/api/auth/logout")
       .catch((error) =>
         console.error("Logout error:", error.response?.data || error.message)
       );
@@ -60,22 +59,6 @@ export const authService = {
     }
   },
 
-  verifyResetToken: async (email: string, token: string) => {
-    try {
-      console.log("Gọi hàm verifyResetToken");
-      const res = await axiosInstance.get(
-        `/api/auth/verify-reset-token/${email}/${token}`
-      );
-      return res.data;
-    } catch (error: any) {
-      console.error("Error verifying reset token:", error);
-      return {
-        isValid: false,
-        message: "Token không hợp lệ hoặc đã hết hạn.",
-      };
-    }
-  },
-
   resetPassword: async (formData: FormData) => {
     try {
       console.log("Gọi hàm resetPassword");
@@ -85,7 +68,6 @@ export const authService = {
       );
       return res.data;
     } catch (error: any) {
-      console.error("Error resetting password:", error);
       throw new Error(
         error.response?.data?.message || "Password reset failed."
       );

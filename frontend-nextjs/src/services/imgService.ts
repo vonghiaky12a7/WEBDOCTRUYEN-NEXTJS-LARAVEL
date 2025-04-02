@@ -64,7 +64,8 @@ export const ImgService = {
   ): Promise<string[]> {
     const formData = new FormData();
     files.forEach((file) => {
-      formData.append("images[]", file); // Sử dụng "images[]" để khớp với API multiple upload
+      const customFileName = `${storyName}_Chapter_${chapterNumber}_${file.name}`;
+      formData.append("images[]", file, customFileName); // Thêm tên file tuỳ chỉnh
     });
 
     try {

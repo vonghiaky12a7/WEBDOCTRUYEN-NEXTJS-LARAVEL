@@ -7,14 +7,13 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\User;
+use App\Mail\ResetPasswordMail;
+use Illuminate\Support\Facades\Mail;
+
 
 class AuthController extends Controller
 {
@@ -55,8 +54,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-
-    // Đăng nhập (hỗ trợ cả session-based và token-based)
+    // Đăng nhập (chỉ token-based)
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -85,53 +83,28 @@ class AuthController extends Controller
         // Nếu email và mật khẩu chính xác
         $user = Auth::user();
 
-        // Lưu role_id vào cookie nhưng không mã hóa
-        $roleIdCookie = cookie('role_id', $user->roleId, 120, '/', 'localhost', false, false);
-
-        return response()->json([
-            'message' => 'Đăng nhập thành công!',
-            'user' => $user
-        ])->withCookie($roleIdCookie);
-    }
-
-
-    public function loginMobile(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Email hoặc mật khẩu không chính xác'], 401);
-        }
-
-        $user = Auth::user();
-
         // Xóa các token cũ
         $user->tokens()->delete();
 
         // Tạo token mới
-        $token = $user->createToken('mobile_token')->plainTextToken;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Đăng nhập thành công!',
-            'token' => $token,
             'user' => $user
-        ]);
+        ])->cookie('auth_token', $token, 60); // cookie expires in 60 minutes
     }
 
     // Đăng xuất
     public function logout(Request $request)
     {
         try {
-            Cookie::expire('laravel_session');
-            Cookie::expire('role_id');
-            Cookie::expire('XSRF-TOKEN');
+            // Revoke the current user's token
+            $request->user()->currentAccessToken()->delete();
 
             return response()->json([
                 'message' => 'Đăng xuất thành công',
-            ], 200);
+            ], 200)->withoutCookie('auth_token');
         } catch (\Exception $e) {
             // Xử lý lỗi máy chủ trong quá trình đăng xuất
             return response()->json([
@@ -140,7 +113,6 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
 
     // Lấy thông tin người dùng
     public function me(Request $request)
@@ -169,34 +141,7 @@ class AuthController extends Controller
             'user' => $user
         ]);
     }
-    public function refreshSession(Request $request)
-    {
-        try {
-            // Lấy người dùng hiện tại
-            $user = $request->user();
 
-            if (!$user) {
-                return response()->json([
-                    'message' => 'Người dùng không xác định hoặc chưa đăng nhập.',
-                ], 401);
-            }
-
-            // Làm mới session ID
-            $request->session()->regenerate();
-            $request->session()->regenerateToken();
-
-
-            return response()->json([
-                'message' => 'Session và CSRF token đã được làm mới thành công.'
-            ], 200);
-        } catch (\Exception $e) {
-            // Xử lý lỗi máy chủ trong quá trình làm mới
-            return response()->json([
-                'message' => 'Đã xảy ra lỗi khi làm mới session và CSRF token.',
-                'error' => $e->getMessage(), // Chỉ hiển thị lỗi chi tiết trong môi trường phát triển
-            ], 500);
-        }
-    }
 
     public function verifyToken(Request $request)
     {
@@ -226,36 +171,38 @@ class AuthController extends Controller
         ]);
     }
 
-    public function forgotPassword(Request $request)
+    public function sendResetLinkEmail(Request $request)
     {
         $request->validate(['email' => 'required|email|exists:users,email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $status = Password::sendResetLink(
+            $request->only('email'),
+            function ($user, $token) {
+                try {
+                    $resetUrl = "http://localhost:3000/auth/reset-password?token={$token}&email=" . urlencode($user->email);
+                    Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
+                } catch (\Exception $e) {
+                    // Ghi log lỗi để debug
+                    \Log::error("Failed to send reset email: " . $e->getMessage());
+                    throw $e; // Ném lỗi để Password::sendResetLink trả về trạng thái thất bại
+                }
+            }
+        );
 
         return $status === Password::RESET_LINK_SENT
-            ? response()->json(['message' => 'Email sent to !'], 200)
-            : response()->json(['message' => 'Unable to send email'], 400);
+            ? response()->json(['message' => 'Email sent!'], 200)
+            : response()->json(['message' => 'Unable to send email', 'error' => $status], 400);
     }
 
-    public function verifyResetToken($email, $token)
-    {
-        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
-
-        if (!$record || !hash_equals($record->token, $token)) {
-            return response()->json(['isValid' => false, 'message' => 'Token không hợp lệ hoặc đã hết hạn.'], 400);
-        }
-
-        return response()->json(['isValid' => true]);
-    }
 
     public function resetPassword(Request $request)
     {
+
         $request->validate([
             'token' => 'required',
             'email' => 'required|email|exists:users,email',
             'password' => 'required|string|min:6|confirmed',
         ]);
-
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
@@ -265,6 +212,7 @@ class AuthController extends Controller
             }
         );
 
+        \Log::info("Reset request - Email: {$request->email}, Token: {$request->token}");
         return $status === Password::PASSWORD_RESET
             ? response()->json(['status' => __($status)], 200)
             : response()->json(['error' => __($status)], 400);

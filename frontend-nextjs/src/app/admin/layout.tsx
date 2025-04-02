@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { href: "/admin/user", label: "Users", icon: "lucide:user" },
     { href: "/admin/story", label: "Story", icon: "lucide:book-open" },
-    { href: "/admin/chapters", label: "Chapters", icon: "lucide:list" },
+    // { href: "/admin/chapters", label: "Chapters", icon: "lucide:list" },
     { href: "/admin/genres", label: "Genres", icon: "lucide:list" },
   ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChapterService } from "@/services/chapterService";
 import { ImgService } from "@/services/imgService";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -8,11 +8,12 @@ import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import Image from "next/image";
 
 export default function AddChapterModal({
   storyId,
   storyName,
-  initialChapterNumber,  // Thêm props nhận số chương tiếp theo
+  initialChapterNumber,
   onClose,
   onSave,
 }: {
@@ -23,49 +24,84 @@ export default function AddChapterModal({
   onSave: () => void;
 }) {
   const [title, setTitle] = useState("");
-  const [chapterNumber, setChapterNumber] = useState<number>(initialChapterNumber); // Gán giá trị mặc định
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [chapterNumber, setChapterNumber] =
+    useState<number>(initialChapterNumber);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files;
+  // Các định dạng ảnh hợp lệ
+  const validImageTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+
+  // Xử lý khi chọn ảnh: chỉ giữ lại file ảnh
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
     if (!files) return;
 
-    setLoading(true);
-    try {
-      const uploadedUrls = await Promise.all(
-        Array.from(files).map((file) =>
-          ImgService.uploadChapterImage(file, storyName, Number(chapterNumber))
-        )
-      );
-      setImageUrls((prev) => [...prev, ...uploadedUrls]);
-    } catch (error) {
-      console.error("Lỗi khi tải ảnh lên:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
+    // Thu hồi các URL tạm thời cũ
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
 
-  async function handleSave() {
-    if (!title || !chapterNumber) {
-      alert("Vui lòng nhập số chương và tiêu đề.");
+    // Lọc chỉ giữ lại các file ảnh
+    const newFiles = Array.from(files).filter((file) =>
+      validImageTypes.includes(file.type)
+    );
+
+    if (newFiles.length === 0) {
+      alert("Không có file ảnh nào được chọn!");
       return;
     }
+
+    const newPreviewUrls = newFiles.map((file) => URL.createObjectURL(file)); // Tạo URL tạm thời mới
+
+    setImageFiles(newFiles); // Ghi đè mảng file cũ
+    setPreviewUrls(newPreviewUrls); // Ghi đè mảng URL tạm thời cũ
+  };
+
+  // Thu hồi URL tạm thời khi component unmount
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  // Xử lý lưu: upload ảnh và tạo chapter
+  const handleSave = async () => {
+    if (!title || !chapterNumber) {
+      alert("Vui lòng tiêu đề.");
+      return;
+    }
+    if (imageFiles.length === 0) {
+      alert("Vui lòng chọn ít nhất một ảnh.");
+      return;
+    }
+
     setLoading(true);
     try {
+      const uploadedUrls = await ImgService.uploadChapterImages(
+        imageFiles,
+        storyName,
+        chapterNumber
+      );
+
       await ChapterService.createChapter(storyId, {
         title,
         chapterNumber: Number(chapterNumber),
-        imageUrls,
+        imageUrls: uploadedUrls,
       });
+
       onSave();
       onClose();
     } catch (error) {
-      console.error("Lỗi khi thêm chương:", error);
+      console.error("Lỗi khi lưu chương:", error);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -83,7 +119,7 @@ export default function AddChapterModal({
               placeholder="Nhập số chương"
               value={chapterNumber}
               onChange={(e) => setChapterNumber(Number(e.target.value))}
-              disabled // Không cho phép chỉnh sửa
+              disabled
             />
 
             <label className="text-sm font-medium">Tiêu đề chương:</label>
@@ -99,16 +135,16 @@ export default function AddChapterModal({
             <input
               type="file"
               multiple
+              accept="image/*" // Giới hạn hiển thị file ảnh trong file explorer
               className="w-full px-3 py-2 border rounded-md"
-              onChange={handleImageUpload}
+              onChange={handleImageChange}
               title="Chọn ảnh chương"
-              placeholder="Chọn ảnh chương"
             />
           </div>
 
           {/* Cột hiển thị ảnh */}
           <div className="w-1/2 flex justify-center items-center border rounded-md overflow-hidden">
-            {imageUrls.length > 0 ? (
+            {previewUrls.length > 0 ? (
               <Swiper
                 modules={[Navigation, Pagination]}
                 spaceBetween={10}
@@ -117,13 +153,21 @@ export default function AddChapterModal({
                 pagination={{ clickable: true }}
                 className="w-full h-[300px]"
               >
-                {imageUrls.map((url, index) => (
-                  <SwiperSlide key={index} className="flex justify-center items-center">
-                    <img
-                      src={url}
-                      alt={`Chapter Image ${index}`}
-                      className="max-w-full max-h-full object-contain rounded-md"
-                    />
+                {previewUrls.map((url, index) => (
+                  <SwiperSlide
+                    key={index}
+                    className="flex justify-center items-center"
+                  >
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={url}
+                        alt={`Preview Image ${index}`}
+                        layout="fill"
+                        objectFit="contain"
+                        className="rounded-md"
+                        priority
+                      />
+                    </div>
                   </SwiperSlide>
                 ))}
               </Swiper>
@@ -135,7 +179,10 @@ export default function AddChapterModal({
 
         {/* Nút hành động */}
         <div className="flex justify-end space-x-2 mt-4">
-          <button className="px-4 py-2 bg-gray-500 text-white rounded-md" onClick={onClose}>
+          <button
+            className="px-4 py-2 bg-gray-500 text-white rounded-md"
+            onClick={onClose}
+          >
             Hủy
           </button>
           <button
