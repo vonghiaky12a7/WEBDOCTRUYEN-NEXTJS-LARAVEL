@@ -16,7 +16,6 @@ function StoryList() {
     const loadStories = async () => {
       try {
         const data = await StoryService.fetchStories();
-        // Dữ liệu trả về đã bao gồm đầy đủ thông tin
         setStories(data);
       } catch (err) {
         console.error(err);
@@ -30,15 +29,17 @@ function StoryList() {
   }, []);
 
   return (
-    <section className="my-10">
+    <section className="my-10 px-4 sm:px-6 lg:px-8">
       {/* Phần New & Trending + Originals */}
       <TrendingStories />
       <hr className="pb-2" />
       {/* Danh sách truyện mới cập nhật */}
-      <div className="px-8">
-        <h2 className="text-2xl font-bold mb-4 ps-2">Truyện Mới Cập Nhật</h2>
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 ps-2">
+          Truyện Mới Cập Nhật
+        </h2>
         <LoadingError isLoading={isLoading} error={error} />
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {stories.map((story) => (
             <StoryCard key={story.storyId} story={story} />
           ))}

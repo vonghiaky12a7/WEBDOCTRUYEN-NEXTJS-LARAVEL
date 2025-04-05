@@ -17,7 +17,7 @@ class AttachTokenFromCookie
     public function handle(Request $request, Closure $next)
     {
         // Lấy token từ cookie 'auth_token'
-        $token = $request->cookie('auth_token');
+        $token = $request->cookie('access_token');
 
         if ($token) {
             // Gắn token vào header Authorization dưới dạng Bearer Token

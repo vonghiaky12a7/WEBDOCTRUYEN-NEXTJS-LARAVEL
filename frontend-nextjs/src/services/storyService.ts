@@ -37,9 +37,14 @@ export const StoryService = {
     try {
       const response = await axiosInstance.get(`${STORY_API_URL}/list`, {
         params: {
-          isHome: true,
+
           limit,
-          sortBy: sort === "newest" ? "newest" : "oldest",
+          sortBy:
+            sort === "newest"
+              ? "newest"
+              : sort === "rating"
+              ? "rating"
+              : "oldest",
         },
       });
 

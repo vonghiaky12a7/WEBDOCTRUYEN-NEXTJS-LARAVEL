@@ -9,7 +9,7 @@ import { Story } from "@/models/story";
 import { Genre } from "@/models/genre";
 import Breadcrumb from "@/components/Breadcrumbs";
 import SearchFilters from "@/components/ui/search/SearchFilters";
-import StoryGrid from "@/components/ui/search/StoryGrid";
+import StoryGridTilted from "@/components/ui/search/StoryGridTilted";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -151,7 +151,7 @@ export default function SearchPage() {
       />
 
       {/* Story Grid */}
-      <StoryGrid
+      <StoryGridTilted
         stories={stories}
         genres={genres}
         storyRatings={storyRatings}

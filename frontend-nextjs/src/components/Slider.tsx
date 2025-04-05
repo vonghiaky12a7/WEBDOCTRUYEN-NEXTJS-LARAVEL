@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,7 +20,7 @@ const Slider = () => {
           limit: 5,
           sort: "desc",
         });
-        console.log("Dữ liệu API trả về:", JSON.stringify(data, null, 2));
+        // console.log("Dữ liệu API trả về:", JSON.stringify(data, null, 2));
         setStories(data);
       } catch (error) {
         console.error("Lỗi khi tải danh sách truyện:", error);
@@ -47,10 +48,7 @@ const Slider = () => {
   };
 
   return (
-    <section
-      className="relative w-full max-h-200 bg-cover bg-center bg-no-repeat my-5 rounded-lg"
-      style={{ backgroundColor: "#EDECEC" }} // Đổi thành nền xám
-    >
+    <section className="relative max-h-200 bg-cover bg-center bg-no-repeat mx-auto my-5 rounded-lg bg-gradient-to-r from-[#e3dbdb] via-[#e0f1af] to-[#e3dbdb] dark:from-[#052222] dark:via-[#274753] dark:to-[#1d223f]">
       {/* Layer 1: Full-width background */}
       <div className="absolute inset-0 bg-black/40 rounded-lg"></div>
 

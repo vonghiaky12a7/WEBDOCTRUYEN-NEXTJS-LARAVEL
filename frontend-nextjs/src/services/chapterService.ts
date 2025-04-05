@@ -29,7 +29,10 @@ export const ChapterService = {
     }
   },
 
-  async createChapter(storyId: string, chapterData: any) {
+  async createChapter(
+    storyId: string,
+    chapterData: { title: string; chapterNumber: number; imageUrls: string[] }
+  ) {
     try {
       const response = await axiosInstance.post(
         `${API_URL}/${storyId}/chapters`,

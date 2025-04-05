@@ -9,11 +9,16 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { DEFAULT_AVATAR } from "@/constants/images";
 import { addToast } from "@heroui/react";
+import { User } from "@/models/user";
 
-export default function Avatar() {
+interface AvatarProps {
+  user: User | null; // Có thể thay bằng kiểu User nếu đã định nghĩa
+}
+
+export default function Avatar({ user }: AvatarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, logout } = useAuthStore();
-  const router = useRouter(); // Khởi tạo router
+  const { logout } = useAuthStore(); // Vẫn cần logout từ useAuthStore
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
@@ -25,7 +30,7 @@ export default function Avatar() {
         color: "success",
         timeout: 2500,
       });
-      router.push("/"); // Chuyển hướng về trang chủ sau khi logout
+      router.push("/");
     } catch (error: any) {
       console.error("Logout failed:", error);
       alert(

@@ -4,16 +4,17 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-import ThemeSwitcher from "@/components/ThemeSwitcher"; // Đảm bảo file tồn tại
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import Avatar from "@/components/Avatar";
+import { useAuthStore } from "@/stores/authStore"; // Import useAuthStore
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { user, isLogged } = useAuthStore(); // Lấy user và isLogged từ useAuthStore
 
   const navItems = [
     { href: "/admin/user", label: "Users", icon: "lucide:user" },
     { href: "/admin/story", label: "Story", icon: "lucide:book-open" },
-    // { href: "/admin/chapters", label: "Chapters", icon: "lucide:list" },
     { href: "/admin/genres", label: "Genres", icon: "lucide:list" },
   ];
 
@@ -42,12 +43,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         {/* Avatar + Theme Switch */}
         <div className="flex items-center space-x-5">
           <ThemeSwitcher />
-          <Avatar />
+          {isLogged && user ? <Avatar user={user} /> : null}
         </div>
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6">{children}</div>
+      <div className="flex-1 overflow-auto p-6 dark:bg-gray-700">
+        {children}
+      </div>
     </div>
   );
 }

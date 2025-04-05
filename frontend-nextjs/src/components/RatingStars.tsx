@@ -68,8 +68,8 @@ const RatingStars: React.FC<RatingStarsProps> = ({
     setError(null);
 
     try {
-      await RatingService.addRating(userId, storyId, starValue);
       setRating(starValue);
+      await RatingService.addRating(userId, storyId, starValue);
 
       // Cập nhật lại rating trung bình
       const ratingData = await RatingService.getRatingsByStoryId(storyId);
@@ -119,7 +119,7 @@ const RatingStars: React.FC<RatingStarsProps> = ({
         <p className="text-red-500 mt-2">
           {error}{" "}
           {!isLogged && (
-            <a href="/login" className="underline text-blue-500">
+            <a href="/auth/signin" className="underline text-blue-500">
               Đăng nhập ngay
             </a>
           )}

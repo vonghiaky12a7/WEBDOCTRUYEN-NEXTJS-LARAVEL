@@ -71,7 +71,7 @@ export default function StoryPage() {
                   boxShadow: "0px 10px 20px rgba(0,0,0,0.3)",
                   translateY: -5,
                 }}
-                className="relative bg-white bg-opacity-90 backdrop-blur-md rounded-lg p-5 flex items-start gap-4 shadow-lg transition-all cursor-pointer"
+                className="relative bg-white bg-opacity-90 mt-4 backdrop-blur-md rounded-lg p-5 flex items-start gap-4 shadow-lg transition-all cursor-pointer"
                 onClick={() => router.push(`/admin/story/${story.storyId}`)}
               >
                 <motion.div

@@ -4,12 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-import NextImage from "next/image";
 import { StoryService } from "@/services/storyService";
 import { ChapterService } from "@/services/chapterService";
 import { Chapter } from "@/models/chapter";
 import { Story } from "@/models/story";
-
+import Image from "next/image";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -130,11 +129,11 @@ export default function ChapterPage() {
                 className="flex justify-center items-center"
               >
                 <div className="relative w-full h-full flex justify-center items-center">
-                  <NextImage
+                  <Image
                     src={imageUrl}
                     alt={`Chapter ${chapter.chapterNumber} - ${chapter.title}`}
-                    layout="fill"
-                    objectFit="contain"
+                    fill
+                    style={{ objectFit: "contain" }}
                     priority
                   />
                 </div>

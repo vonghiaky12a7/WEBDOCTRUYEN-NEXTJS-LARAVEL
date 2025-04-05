@@ -83,8 +83,6 @@ export default function Signin() {
     <div className="flex h-full w-full items-center justify-center">
       <div className="w-full max-w-sm flex flex-col gap-4 rounded-large bg-content1 px-8 pb-10 pt-6 shadow-small">
         <h1 className="text-large font-medium">Sign in to your account</h1>
-        <p className="text-small text-default-500">to continue to Acme</p>
-
         <Formik
           initialValues={{ email: "", password: "", remember: false }}
           validationSchema={validationSchema}
