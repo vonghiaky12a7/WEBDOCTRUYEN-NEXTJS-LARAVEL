@@ -72,7 +72,7 @@ export default function SearchFilters({
               className="w-56 h-10"
             >
               {genres.map((genre) => (
-                <SelectItem key={genre.genreId} value={genre.genreId}>
+                <SelectItem key={genre.genreId}>
                   {genre.genreName}
                 </SelectItem>
               ))}

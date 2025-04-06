@@ -3,7 +3,6 @@ import "./global.css";
 import Providers from "./providers";
 import React from "react";
 import LayoutWrapper from "@/components/layoutWrapper";
-import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
   title: "Novel App",
@@ -13,20 +12,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const cookieStore = await cookies();
-  const userEncoded = cookieStore.get("x-user")?.value;
 
-  // Decode Base64 nếu có
-  const userFromServer = userEncoded
-    ? Buffer.from(userEncoded, "base64").toString("utf-8")
-    : undefined;
-
-  console.log("User from server:", userFromServer);
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
         <Providers>
-          <LayoutWrapper userFromServer={userFromServer}>
+          <LayoutWrapper>
             {children}
           </LayoutWrapper>
         </Providers>

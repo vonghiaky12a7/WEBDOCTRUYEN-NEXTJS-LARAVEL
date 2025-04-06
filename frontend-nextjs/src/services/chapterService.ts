@@ -2,7 +2,7 @@
 // services/chapterService.ts
 import axiosInstance from "@/utils/axiosInstance";
 
-const API_URL = "/api/stories";
+const API_URL = "/stories";
 
 export const ChapterService = {
   async getChaptersByStory(storyId: string) {

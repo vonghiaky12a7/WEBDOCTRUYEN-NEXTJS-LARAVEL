@@ -6,6 +6,9 @@ use App\Http\Controllers\GenreController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\RatingController;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
@@ -24,6 +27,15 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
         }
     );
+
+    Route::post('/favorites/check', [FavoriteController::class, 'checkFavorite']);
+    Route::post('/favorites/add', [FavoriteController::class, 'addToFavorites']);
+    Route::delete('/favorites/remove', [FavoriteController::class, 'destroy']);
+
+    Route::get('/comments/{storyId}', [CommentController::class, 'getComments']);
+    Route::post('/comments/add', [CommentController::class, 'addComment']);
+    Route::delete('/comments/{commentId}', [CommentController::class, 'destroyById']);
+
     // User routes with admin middleware
     Route::middleware('admin')->prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);

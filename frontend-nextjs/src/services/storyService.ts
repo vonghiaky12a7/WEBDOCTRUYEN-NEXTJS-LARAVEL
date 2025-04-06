@@ -5,8 +5,8 @@ import { Story } from "@/models/story";
 import { Genre } from "@/models/genre";
 import axios from "axios";
 
-const STORY_API_URL = "/api/stories";
-const GENRE_API_URL = "/api/genres";
+const STORY_API_URL = "/stories";
+const GENRE_API_URL = "/genres";
 
 export const StoryService = {
   async fetchStories(): Promise<Story[]> {

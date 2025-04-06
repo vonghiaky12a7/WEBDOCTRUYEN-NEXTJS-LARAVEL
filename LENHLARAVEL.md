@@ -22,7 +22,7 @@ php artisan migrate
 
 ## Chạy migration theo file cụ thể
 
-php artisan migrate --path=/database/migrations/2025_03_27_043734_create_chapters_table.php
+php artisan migrate --path=/database/migrations/2025_03_29_085700_create_favorites_table.php
 
 ## Rollback migration (Quay lại migration trước đó)
 

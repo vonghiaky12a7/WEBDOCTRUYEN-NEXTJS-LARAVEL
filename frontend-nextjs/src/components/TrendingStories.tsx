@@ -13,10 +13,7 @@ const TrendingStories: React.FC = () => {
       try {
         // const topStories = await StoryService.getAllRatingsDESC(5);
         // setTrendingStories(topStories);
-        const topStories = await StoryService.fetchStoriesDesc({
-          limit: 5,
-          sort: "rating",
-        });
+        const topStories = await StoryService.getAllRatingsDESC(5);
         setTrendingStories(topStories);
         const newStories = await StoryService.fetchStoriesDesc({
           limit: 5,

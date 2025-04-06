@@ -15,32 +15,22 @@ export default function LayoutWrapper({
 }) {
   const {
     isLogged,
-    setAuth,
+    checkAuthStatus,
     refreshToken,
     clearAuth,
-    checkAuthStatus,
     getExpiresAt,
-    isTokenValid,
   } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
   const isAdminPage = pathname?.startsWith("/admin");
 
   useEffect(() => {
-    console.log("Pathname:", pathname);
-    console.log("Is Admin Page:", isAdminPage);
-    console.log("Is Logged:", isLogged);
-
     const initializeAuth = async () => {
       try {
-        console.log("Checking auth status...");
         await checkAuthStatus();
-        console.log("Auth status checked successfully.");
       } catch (error) {
         console.error("Auth check failed:", error);
-        clearAuth();
-        if (pathname?.startsWith("/admin")) {
-          console.log("Redirecting to /auth/signin...");
+        if (isAdminPage) {
           router.push("/auth/signin");
         }
       }
@@ -48,64 +38,35 @@ export default function LayoutWrapper({
 
     initializeAuth();
 
-    let timeoutId: NodeJS.Timeout | undefined;
+    let refreshInterval: NodeJS.Timeout | undefined;
 
-    const scheduleTokenRefresh = async () => {
-      console.log("Scheduling token-refresh...");
-      const isValid = await isTokenValid();
-      console.log("Is token valid:", isValid);
+    const scheduleTokenRefresh = () => {
+      if (!isLogged) return;
 
-      if (!isValid) {
-        console.warn("Token is invalid, clearing auth...");
+      const expiresAt = getExpiresAt();
+      if (!expiresAt) {
         clearAuth();
-        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-        if (pathname?.startsWith("/admin")) {
-          console.log("Redirecting to /auth/signin...");
-          router.push("/auth/signin");
-        }
+        if (isAdminPage) router.push("/auth/signin");
         return;
       }
 
-      const expiresAt = getExpiresAt();
-      console.log("Token expires at:", expiresAt);
+      const timeUntilExpiration = expiresAt - Date.now();
+      const bufferTime = 60 * 1000; // 1 phút trước khi hết hạn
+      const refreshTime = Math.max(timeUntilExpiration - bufferTime, 0);
 
-      if (expiresAt) {
-        const timeUntilExpiration = expiresAt - Date.now();
-        console.log("Time until expiration (ms):", timeUntilExpiration);
+      console.log(`Scheduling token refresh in ${refreshTime / 1000} seconds`);
 
-        if (timeUntilExpiration <= 0) {
-          console.warn("Token has already expired, clearing auth...");
+      refreshInterval = setTimeout(async () => {
+        try {
+          await refreshToken();
+          console.log("Token refreshed successfully");
+          scheduleTokenRefresh(); // Lên lịch lại sau khi refresh thành công
+        } catch (error) {
+          console.error("Token refresh failed:", error);
           clearAuth();
-          alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-          if (pathname?.startsWith("/admin")) {
-            console.log("Redirecting to /auth/signin...");
-            router.push("/auth/signin");
-          }
-          return;
+          if (isAdminPage) router.push("/auth/signin");
         }
-
-        const bufferTime = 60 * 1000; // 1 minute
-        const timeToRefresh = Math.max(timeUntilExpiration - bufferTime, 0);
-        console.log("Scheduling refresh in (ms):", timeToRefresh);
-
-        timeoutId = setTimeout(async () => {
-          try {
-            console.log("Refreshing token...");
-            await refreshToken();
-            console.log("Token refreshed successfully.");
-            // Schedule the next refresh
-            scheduleTokenRefresh();
-          } catch (error) {
-            console.error("Error refreshing token:", error);
-            clearAuth();
-            alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-            if (pathname?.startsWith("/admin")) {
-              console.log("Redirecting to /auth/signin...");
-              router.push("/auth/signin");
-            }
-          }
-        }, timeToRefresh);
-      }
+      }, refreshTime);
     };
 
     if (isLogged) {
@@ -113,22 +74,12 @@ export default function LayoutWrapper({
     }
 
     return () => {
-      if (timeoutId) {
-        console.log("Clearing timeout...");
-        clearTimeout(timeoutId);
+      if (refreshInterval) {
+        console.log("Clearing refresh interval");
+        clearTimeout(refreshInterval);
       }
     };
-  }, [
-    isLogged,
-    setAuth,
-    refreshToken,
-    clearAuth,
-    checkAuthStatus,
-    router,
-    pathname,
-    getExpiresAt,
-    isTokenValid,
-  ]);
+  }, [isLogged, pathname]); // Chỉ phụ thuộc vào isLogged và pathname
 
   return (
     <>

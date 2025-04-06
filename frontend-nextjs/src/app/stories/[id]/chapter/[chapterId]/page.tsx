@@ -1,14 +1,16 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
+import NextImage from "next/image";
 import { StoryService } from "@/services/storyService";
 import { ChapterService } from "@/services/chapterService";
 import { Chapter } from "@/models/chapter";
 import { Story } from "@/models/story";
-import Image from "next/image";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -24,8 +26,29 @@ export default function ChapterPage() {
   const [error, setError] = useState("");
   const [story, setStory] = useState<Story | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [initialSlide, setInitialSlide] = useState(0);
 
   const contentRef = useRef<HTMLDivElement>(null); // Ref để focus vào nội dung
+
+  const getReadingState = () => {
+    try {
+      const raw = localStorage.getItem("story_state");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const saveReadingState = (
+    storyId: string,
+    chapterId: string,
+    index: number
+  ) => {
+    const state = getReadingState();
+    if (!state[storyId]) state[storyId] = {};
+    state[storyId][chapterId] = index;
+    localStorage.setItem("story_state", JSON.stringify(state));
+  };
 
   useEffect(() => {
     const fetchChapter = async () => {
@@ -58,6 +81,14 @@ export default function ChapterPage() {
       fetchChapter();
     }
   }, [id, chapterId]);
+
+  useEffect(() => {
+    if (chapter && id && chapterId) {
+      const state = getReadingState();
+      const savedIndex = state?.[id]?.[chapterId] ?? 0;
+      setInitialSlide(!isNaN(savedIndex) ? savedIndex : 0);
+    }
+  }, [chapter]);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -117,29 +148,36 @@ export default function ChapterPage() {
 
       {/* Swiper */}
       <div className="flex-grow relative">
-        <Swiper
-          modules={[Navigation, Pagination]}
-          navigation
-          className="w-full h-full"
-        >
-          {Array.isArray(chapter.imageUrls) &&
-            chapter.imageUrls.map((imageUrl, index) => (
+        {chapter && chapter.imageUrls && !loading && (
+          <Swiper
+            key={initialSlide} // key để force remount Swiper khi initialSlide thay đổi
+            modules={[Navigation, Pagination]}
+            navigation
+            className="w-full h-full"
+            initialSlide={initialSlide}
+            onSlideChange={(swiper) => {
+              const currentIndex = swiper.activeIndex;
+              saveReadingState(id, chapterId, currentIndex);
+            }}
+          >
+            {(chapter.imageUrls as string[]).map((imageUrl, index) => (
               <SwiperSlide
                 key={index}
                 className="flex justify-center items-center"
               >
                 <div className="relative w-full h-full flex justify-center items-center">
-                  <Image
+                  <NextImage
                     src={imageUrl}
                     alt={`Chapter ${chapter.chapterNumber} - ${chapter.title}`}
-                    fill
-                    style={{ objectFit: "contain" }}
+                    layout="fill"
+                    objectFit="contain"
                     priority
                   />
                 </div>
               </SwiperSlide>
             ))}
-        </Swiper>
+          </Swiper>
+        )}
       </div>
     </div>
   );

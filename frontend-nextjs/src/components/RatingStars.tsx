@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { RatingService } from "../services/ratingService";
 import { RatingStarsProps } from "../models/rating";
 import { useAuthStore } from "@/stores/authStore";
+import { addToast } from "@heroui/toast";
 
 const RatingStars: React.FC<RatingStarsProps> = ({
   storyId,
@@ -59,7 +60,12 @@ const RatingStars: React.FC<RatingStarsProps> = ({
 
   const handleRating = async (starValue: number) => {
     if (!isLogged) {
-      setError("Bạn cần đăng nhập để đánh giá!");
+      addToast({
+        title: "Error",
+        description: "Bạn cần đăng nhập để thực hiện chức năng này",
+        color: "danger",
+        timeout: 2500,
+      });
       return;
     }
 

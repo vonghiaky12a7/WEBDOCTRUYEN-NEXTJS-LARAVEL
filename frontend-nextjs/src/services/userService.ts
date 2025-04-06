@@ -5,7 +5,7 @@ import axiosInstance from "@/utils/axiosInstance";
 export const userService = {
   async getUsers(): Promise<User[]> {
     try {
-      const response = await axiosInstance.get("/api/users");
+      const response = await axiosInstance.get("/users");
       return response.data;
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -15,7 +15,7 @@ export const userService = {
 
   async updateUserRole(userId: string, roleId: number): Promise<User> {
     try {
-      const response = await axiosInstance.put(`/api/users/${userId}`, {
+      const response = await axiosInstance.put(`/users/${userId}`, {
         roleId,
       });
       return response.data;
@@ -27,7 +27,7 @@ export const userService = {
 
   async deleteUser(userId: string): Promise<void> {
     try {
-      await axiosInstance.delete(`/api/users/${userId}`);
+      await axiosInstance.delete(`/users/${userId}`);
     } catch (error) {
       console.error("Error deleting user:", error);
       throw error;

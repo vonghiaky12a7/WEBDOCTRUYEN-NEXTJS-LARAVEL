@@ -155,23 +155,28 @@ class AuthController extends Controller
         $rt = PersonalRefreshToken::where('token', $refreshToken)->first();
 
         if (!$rt || $rt->isExpired() || $rt->isRevoked()) {
-            return response()->json(['message' => 'Refresh token không hợp lệ hoặc đã hết hạn'], 401);
+            return response()->json(['message' => 'Refresh token không hợp lệ hoặc đã hết hạn'], 401)
+                ->withoutCookie('access_token')
+                ->withoutCookie('expires_at')
+                ->withoutCookie('role_id');
         }
 
         $user = $rt->tokenable;
 
+        // Xóa AT cũ
         $user->tokens()->delete();
 
+        // Tạo AT mới (15 phút)
         $newAccessToken = $user->createToken('access_token', ['*'], now()->addMinutes(15))->plainTextToken;
-        $expiresAt = now()->addMinutes(15)->timestamp * 1000;
+        $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
 
         return response()->json([
             'message' => 'Refresh token thành công',
             'user' => $user,
-            'expires_in' => 900,
-        ])->cookie('access_token', $newAccessToken, 15)
-            ->cookie('expires_at', $expiresAt, 15)
-            ->cookie('role_id', $user->roleId, 15); // Cập nhật lại role_id
+            'expires_in' => 900, // 15 phút tính bằng giây
+        ])->cookie('access_token', $newAccessToken, 15, null, null, false, true) // HttpOnly = true
+            ->cookie('expires_at', $expiresAt, 15, null, null, false, false) // HttpOnly = false để client đọc được
+            ->cookie('role_id', $user->roleId, 15, null, null, false, false); // HttpOnly = false
     }
 
 

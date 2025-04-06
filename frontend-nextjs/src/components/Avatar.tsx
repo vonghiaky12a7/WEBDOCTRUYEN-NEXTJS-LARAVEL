@@ -20,9 +20,9 @@ export default function Avatar({ user }: AvatarProps) {
   const { logout } = useAuthStore(); // Vẫn cần logout từ useAuthStore
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
-      await logout();
+      logout();
       setIsOpen(false);
       addToast({
         title: "Success",
@@ -33,10 +33,13 @@ export default function Avatar({ user }: AvatarProps) {
       router.push("/");
     } catch (error: any) {
       console.error("Logout failed:", error);
-      alert(
-        "Đăng xuất thất bại: " +
-          (error.response?.data?.message || "Lỗi không xác định")
-      );
+      addToast({
+        title: "Success",
+        description: "Đăng xuất thất bại" +
+          (error.response?.data?.message || "Lỗi không xác định"),
+        color: "success",
+        timeout: 2500,
+      });
     }
   };
 

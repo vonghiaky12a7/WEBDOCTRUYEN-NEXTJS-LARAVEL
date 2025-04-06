@@ -52,26 +52,24 @@ export const useAuthStore = create<AuthState>()(
       },
 
       isTokenValid: async () => {
-        const expiresAt = await getCookie("expires_at");
-        console.log(expiresAt);
-        if (!expiresAt || (expiresAt && Date.now() > parseInt(expiresAt))) {
-          return false;
-        }
-        return true;
+        const expiresAt = getCookie("expires_at");
+        if (!expiresAt) return false;
+        const expiresAtNum = parseInt(expiresAt as string);
+        return Date.now() < expiresAtNum;
       },
 
       checkAuthStatus: async () => {
-        const currentUser = get().user;
         const isValid = await get().isTokenValid();
-
-        console.log("Is Token Valid:", isValid);
-        console.log("Current User:", currentUser);
-
         if (!isValid) {
-          get().clearAuth();
-          return;
+          try {
+            await get().refreshToken(); // Thử refresh nếu token hết hạn
+          } catch (error) {
+            get().clearAuth();
+            throw error;
+          }
         }
 
+        const currentUser = get().user;
         if (!currentUser) {
           try {
             const user = await authService.getProfile();
@@ -87,13 +85,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       refreshToken: async () => {
-        const refreshToken = getCookie("refresh_token");
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
+        try {
+          const { user } = await authService.refreshToken();
+          set({ user, isLogged: true });
+        } catch (error) {
+          console.error("Refresh token failed:", error);
+          get().clearAuth();
+          throw error;
         }
-
-        const { user } = await authService.refreshToken();
-        set({ user, isLogged: true });
       },
 
       getExpiresAt: () => {

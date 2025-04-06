@@ -5,7 +5,7 @@ import axiosInstance from "@/utils/axiosInstance";
 export class GenreService {
   static async getGenres(): Promise<Genre[]> {
     try {
-      const response = await axiosInstance.get("/api/genres");
+      const response = await axiosInstance.get("/genres");
       return response.data;
     } catch (error) {
       console.error("Error fetching genres:", error);
@@ -15,7 +15,7 @@ export class GenreService {
 
   static async getGenre(id: number): Promise<Genre> {
     try {
-      const response = await axiosInstance.get(`/api/genres/${id}`);
+      const response = await axiosInstance.get(`/genres/${id}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching genre:", error);
@@ -25,7 +25,7 @@ export class GenreService {
 
   static async createGenre(genreData: { genreName: string }): Promise<Genre> {
     try {
-      const response = await axiosInstance.post("/api/genres", genreData);
+      const response = await axiosInstance.post("/genres", genreData);
       return response.data;
     } catch (error) {
       console.error("Error creating genre:", error);
@@ -38,7 +38,7 @@ export class GenreService {
     genreData: { genreName: string }
   ): Promise<Genre> {
     try {
-      const response = await axiosInstance.put(`/api/genres/${id}`, genreData);
+      const response = await axiosInstance.put(`/genres/${id}`, genreData);
       return response.data;
     } catch (error) {
       console.error("Error updating genre:", error);
@@ -48,7 +48,7 @@ export class GenreService {
 
   static async deleteGenre(id: number): Promise<void> {
     try {
-      await axiosInstance.delete(`/api/genres/${id}`);
+      await axiosInstance.delete(`/genres/${id}`);
     } catch (error) {
       console.error("Error deleting genre:", error);
       throw error;

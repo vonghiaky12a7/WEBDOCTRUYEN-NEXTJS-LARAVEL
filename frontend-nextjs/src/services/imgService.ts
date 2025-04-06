@@ -3,7 +3,7 @@
 import axiosInstance from "@/utils/axiosInstance";
 import axios from "axios";
 
-const IMAGE_API_URL = "/api"; // Base URL đã được config trong axiosInstance
+const IMAGE_API_URL = ""; // Base URL đã được config trong axiosInstance
 
 export const ImgService = {
   // Upload ảnh đại diện (avatar) của user

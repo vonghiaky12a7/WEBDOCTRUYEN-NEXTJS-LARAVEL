@@ -2,7 +2,7 @@
 import axiosInstance from "@/utils/axiosInstance";
 
 // Không cần import axios nữa vì chúng ta sẽ dùng axiosInstance
-// const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL + "/api/stories";
+// const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL + "/stories";
 // Vì axiosInstance đã có baseURL là "http://localhost:8000", ta chỉ cần dùng đường dẫn tương đối
 
 export const RatingService = {
@@ -13,7 +13,7 @@ export const RatingService = {
     rating: number
   ): Promise<any> {
     try {
-      const response = await axiosInstance.post("/api/stories/rating", {
+      const response = await axiosInstance.post("/stories/rating", {
         userId,
         storyId,
         rating,
@@ -29,7 +29,7 @@ export const RatingService = {
   async getRatingsByStoryId(storyId: string): Promise<any> {
     try {
       const response = await axiosInstance.get(
-        `/api/stories/${storyId}/ratings`
+        `/stories/${storyId}/ratings`
       );
       return response.data;
     } catch (error) {
@@ -40,7 +40,7 @@ export const RatingService = {
 
   async getRatingsByStoryIds(storyIds: string[]) {
     try {
-      const response = await axiosInstance.get("/api/ratings", {
+      const response = await axiosInstance.get("/ratings", {
         params: { storyIds: storyIds.join(",") },
       });
       return response.data;
