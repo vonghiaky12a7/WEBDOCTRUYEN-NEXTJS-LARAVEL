@@ -10,6 +10,8 @@ class Comment extends Model
 {
     use HasFactory;
 
+    protected $table = 'comments'; // Đảm bảo tên bảng đúng
+    protected $primaryKey = 'id'; // Nếu dùng UUID, cần khai báo
     /**
      * Indicates if the IDs are auto-incrementing.
      *
@@ -30,9 +32,11 @@ class Comment extends Model
      * @var array
      */
     protected $fillable = [
+        'id',
         'userId',
         'storyId',
         'content',
+        'created_at',
     ];
 
     /**

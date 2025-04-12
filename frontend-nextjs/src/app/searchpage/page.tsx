@@ -1,4 +1,3 @@
-// app/searchpage/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -9,7 +8,7 @@ import { Story } from "@/models/story";
 import { Genre } from "@/models/genre";
 import Breadcrumb from "@/components/Breadcrumbs";
 import SearchFilters from "@/components/ui/search/SearchFilters";
-import StoryGrid from "@/components/ui/search/StoryGrid";
+import StoryGridTilted from "@/components/ui/search/StoryGridTilted";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -23,25 +22,25 @@ export default function SearchPage() {
   );
   const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "newest");
   const [stories, setStories] = useState<Story[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(
+    Number(searchParams.get("page")) || 1
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [storyRatings, setStoryRatings] = useState<{ [key: string]: number }>(
     {}
   );
 
-  // Breakpoints for responsive design
   const isLg = useMediaQuery({ minWidth: 1024 });
   const isMd = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
   const isSm = useMediaQuery({ minWidth: 640, maxWidth: 767 });
-
-  // Calculate priority count based on breakpoint
   const priorityCount = isLg ? 16 : isMd ? 9 : isSm ? 4 : 1;
 
-  // Fetch genres on component mount
   useEffect(() => {
     const loadGenres = async () => {
       try {
-        const data = await StoryService.fetchGenres();
+        const data = await StoryService.getAllGenres();
         setGenres(data);
       } catch (error) {
         console.error("Error loading genres:", error);
@@ -50,20 +49,22 @@ export default function SearchPage() {
     loadGenres();
   }, []);
 
-  // Function to fetch stories with filters
   const fetchFilteredStories = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const data = await StoryService.searchStories({
+      setIsLoading(true);
+      const { stories, total } = await StoryService.searchStories({
         title: searchTerm,
         genres: selectedGenres,
         sortBy,
+        page: currentPage,
+        limit: 8,
       });
-      setStories(Array.isArray(data) ? data : []);
+      setStories(stories || []);
+      setTotalItems(total || 0);
 
-      if (Array.isArray(data) && data.length > 0) {
+      if (stories?.length > 0) {
         const ratingsMap: { [key: string]: number } = {};
-        data.forEach((story) => {
+        stories.forEach((story) => {
           ratingsMap[story.storyId] = story.rating || 0;
         });
         setStoryRatings(ratingsMap);
@@ -71,75 +72,77 @@ export default function SearchPage() {
     } catch (error) {
       console.error("Error fetching stories:", error);
       setStories([]);
+      setTotalItems(0);
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, selectedGenres, sortBy]);
+  }, [searchTerm, selectedGenres, sortBy, currentPage]);
 
-  // Fetch stories when filters change
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       fetchFilteredStories();
-    }, 500); // Debounce 500ms
+    }, 500);
     return () => clearTimeout(debounceTimer);
   }, [fetchFilteredStories]);
 
-  // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    updateSearchParams(value, selectedGenres, sortBy);
+    setCurrentPage(1); // Reset về trang 1 khi thay đổi bộ lọc
+    updateSearchParams(value, selectedGenres, sortBy, 1);
   };
 
-  // Handle sort change
   const handleSortChange = (
     keys: "all" | (Set<React.Key> & { anchorKey?: string; currentKey?: string })
   ) => {
     if (keys === "all") return;
-
     const selectedKeys = Array.from(keys) as string[];
     if (selectedKeys.length > 0) {
       const newSortBy = selectedKeys[0];
       setSortBy(newSortBy);
-      updateSearchParams(searchTerm, selectedGenres, newSortBy);
+      setCurrentPage(1); // Reset về trang 1
+      updateSearchParams(searchTerm, selectedGenres, newSortBy, 1);
     }
   };
 
-  // Handle genre selection change
   const handleGenreChange = (
     keys: "all" | (Set<React.Key> & { anchorKey?: string; currentKey?: string })
   ) => {
     if (keys === "all") return;
-
     const selectedKeys = Array.from(keys) as string[];
     const newGenres = selectedKeys.map(Number);
     setSelectedGenres(newGenres);
-    updateSearchParams(searchTerm, newGenres, sortBy);
+    setCurrentPage(1); // Reset về trang 1
+    updateSearchParams(searchTerm, newGenres, sortBy, 1);
   };
 
-  // Update URL with search parameters
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateSearchParams(searchTerm, selectedGenres, sortBy, page);
+  };
+
   const updateSearchParams = (
     title: string,
     genres: number[],
-    sort: string
+    sort: string,
+    page: number
   ) => {
     const params = new URLSearchParams();
     if (title) params.set("title", title);
     if (genres.length) params.set("genres", genres.join(","));
     params.set("sortBy", sort);
+    params.set("page", page.toString());
     router.push(`/searchpage?${params.toString()}`, { scroll: false });
   };
 
   return (
     <section className="min-h-screen bg-background">
-      {/* Breadcrumb */}
       <div className="bg-muted/50">
         <div className="container mx-auto py-2 px-4">
           <Breadcrumb items={[{ label: "Tìm Truyện" }]} />
         </div>
       </div>
 
-      {/* Search and Filter Bar */}
       <SearchFilters
         searchTerm={searchTerm}
         selectedGenres={selectedGenres}
@@ -150,14 +153,16 @@ export default function SearchPage() {
         handleGenreChange={handleGenreChange}
       />
 
-      {/* Story Grid */}
-      <StoryGrid
+      <StoryGridTilted
         stories={stories}
         genres={genres}
         storyRatings={storyRatings}
         isLoading={isLoading}
         searchTerm={searchTerm}
         priorityCount={priorityCount}
+        totalPages={Math.ceil(totalItems / 8)}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
       />
     </section>
   );

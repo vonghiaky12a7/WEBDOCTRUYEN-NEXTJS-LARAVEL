@@ -10,11 +10,10 @@ class Chapter extends Model
     use HasFactory;
 
     protected $table = 'chapters';
-    protected $primaryKey = 'chapterId'; // Khóa chính
-    public $incrementing = false; // Khóa chính không tự tăng
-    protected $keyType = 'string'; // Kiểu dữ liệu của khóa chính
-    public $timestamps = false; // Không sử dụng timestamps
-
+    protected $primaryKey = 'chapterId';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = false;
 
     protected $fillable = [
         'chapterId',
@@ -24,7 +23,6 @@ class Chapter extends Model
         'imageUrls'
     ];
 
-    // Cast imageUrls từ JSON string sang array khi lấy từ DB
     protected $casts = [
         'imageUrls' => 'array'
     ];
@@ -34,25 +32,23 @@ class Chapter extends Model
         return $this->belongsTo(Story::class, 'storyId', 'storyId');
     }
 
-    // Accessor để lấy imageUrls dưới dạng array
+    // Xử lý khi lấy giá trị của imageUrls từ database.
     public function getImageUrlsAttribute($value)
     {
-        // Nếu giá trị là JSON hợp lệ, trả về mảng
         return json_decode($value, true) ?? [];
     }
 
-    // Mutator để tự động chuyển đổi imageUrls thành JSON trước khi lưu
+    // Xử lý khi gán giá trị cho imageUrls trước khi lưu vào database.
     public function setImageUrlsAttribute($value)
     {
-        if (is_string($value)) {
-            // Nếu là string chứa URLs ngăn cách bởi dấu phẩy
-            $urls = array_map('trim', explode(',', $value));
-            $this->attributes['imageUrls'] = json_encode($urls);
+        // Nếu giá trị đã là chuỗi JSON, không cần json_encode lại
+        if (is_string($value) && json_decode($value, true) !== null) {
+            $this->attributes['imageUrls'] = $value;
         } else if (is_array($value)) {
-            // Nếu đã là array
+            // Nếu là mảng, json_encode một lần
             $this->attributes['imageUrls'] = json_encode($value);
         } else {
-            // Nếu không phải string hay array, chuyển thành mảng rỗng hoặc xử lý theo yêu cầu
+            // Nếu không phải chuỗi JSON hay mảng, chuyển thành mảng rỗng
             $this->attributes['imageUrls'] = json_encode([]);
         }
     }

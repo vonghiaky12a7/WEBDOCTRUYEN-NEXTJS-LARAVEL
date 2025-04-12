@@ -1,3 +1,4 @@
+// ChapterPage.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -7,14 +8,19 @@ import { Navigation, Pagination } from "swiper/modules";
 import NextImage from "next/image";
 import { StoryService } from "@/services/storyService";
 import { ChapterService } from "@/services/chapterService";
+import { getReadingProgressService } from "@/services/readingProgressService";
+import type { ReadingProgressService as IReadingProgressService } from "@/services/readingProgressService";
 import { Chapter } from "@/models/chapter";
 import { Story } from "@/models/story";
+import { useAuthStore } from "@/stores/authStore";
+ 
 
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 export default function ChapterPage() {
+  const { isLogged } = useAuthStore();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -25,15 +31,38 @@ export default function ChapterPage() {
   const [error, setError] = useState("");
   const [story, setStory] = useState<Story | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [initialSlide, setInitialSlide] = useState(0);
 
-  const contentRef = useRef<HTMLDivElement>(null); // Ref để focus vào nội dung
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [readingService, setReadingService] = useState<IReadingProgressService | null>(null);
+
+  const getReadingState = () => {
+    try {
+      const raw = localStorage.getItem("story_state");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
 
   useEffect(() => {
-    const fetchChapter = async () => {
+    if (typeof window !== "undefined") {
+      const service = getReadingProgressService();
+      setReadingService(service);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const data = await StoryService.getChapterDetail(id, chapterId);
-        const storyData = await StoryService.fetchStoryById(id);
+        const data = await StoryService.getChapterById(id, chapterId);
+        const storyData = await StoryService.getStoryById(id);
         const chapterList = await ChapterService.getChaptersByStory(id);
+
+        let progress = null;
+        if (isLogged && readingService) {
+          progress = await readingService.getProgress(id);
+        }
 
         if (!data || !data.imageUrls) {
           setError("Invalid chapter data");
@@ -47,6 +76,29 @@ export default function ChapterPage() {
         setChapter({ ...data, imageUrls: imageUrlsArray });
         setStory(storyData);
         setChapters(chapterList);
+
+        const localState = getReadingState();
+        let savedIndex = 0;
+
+        if (isLogged) {
+          if (
+            localState?.[id]?.[chapterId] !== undefined &&
+            localState?.[id]?.[chapterId] !== null
+          ) {
+            savedIndex = localState[id][chapterId];
+          } else if (progress?.lastPage !== undefined && progress?.lastPage !== null) {
+            savedIndex = progress.lastPage;
+          }
+        } else {
+          const localProgress = localState?.[id]?.[chapterId];
+          if (localProgress === undefined || localProgress === null) {
+            savedIndex = 1; // chưa login và local rỗng, bắt đầu từ slide 1
+          } else {
+            savedIndex = localProgress;
+          }
+        }
+
+        setInitialSlide(!isNaN(savedIndex) ? savedIndex : 0);
       } catch (err: unknown) {
         console.log(err);
         setError("Failed to fetch chapter data");
@@ -56,9 +108,13 @@ export default function ChapterPage() {
     };
 
     if (id && chapterId) {
-      fetchChapter();
+      fetchData();
     }
-  }, [id, chapterId]);
+
+    return () => {
+      // Cleanup nếu cần
+    };
+  }, [id, chapterId, isLogged, readingService]);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -85,9 +141,7 @@ export default function ChapterPage() {
 
   return (
     <div ref={contentRef} className="flex flex-col w-full h-screen">
-      {/* Thanh điều hướng */}
       <div className="w-full bg-black bg-opacity-70 text-white py-4 flex justify-between items-center px-6">
-        {/* Nút Quay lại */}
         <button
           onClick={() => router.push(`/stories/${id}`)}
           className="px-4 py-2 text-lg bg-gray-700 hover:bg-gray-600 rounded-lg"
@@ -99,7 +153,6 @@ export default function ChapterPage() {
           {story?.title} - {chapter.title}
         </h1>
 
-        {/* Chuyển chương */}
         <div className="flex gap-4">
           <button
             onClick={() => handleChapterChange(-1)}
@@ -116,15 +169,22 @@ export default function ChapterPage() {
         </div>
       </div>
 
-      {/* Swiper */}
       <div className="flex-grow relative">
-        <Swiper
-          modules={[Navigation, Pagination]}
-          navigation
-          className="w-full h-full"
-        >
-          {Array.isArray(chapter.imageUrls) &&
-            chapter.imageUrls.map((imageUrl, index) => (
+        {chapter && chapter.imageUrls && !loading && (
+          <Swiper
+            key={initialSlide}
+            modules={[Navigation, Pagination]}
+            navigation
+            className="w-full h-full"
+            initialSlide={initialSlide}
+            onSlideChange={(swiper) => {
+              const currentIndex = swiper.activeIndex;
+              if (readingService) {
+                readingService.updateProgress(id, chapterId, currentIndex);
+              }
+            }}
+          >
+            {(chapter.imageUrls as string[]).map((imageUrl, index) => (
               <SwiperSlide
                 key={index}
                 className="flex justify-center items-center"
@@ -140,7 +200,8 @@ export default function ChapterPage() {
                 </div>
               </SwiperSlide>
             ))}
-        </Swiper>
+          </Swiper>
+        )}
       </div>
     </div>
   );

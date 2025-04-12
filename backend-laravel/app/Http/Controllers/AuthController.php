@@ -11,9 +11,11 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\User;
+use App\Models\PersonalRefreshToken;
 use App\Mail\ResetPasswordMail;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -29,7 +31,6 @@ class AuthController extends Controller
         if ($validator->fails()) {
             $errors = $validator->errors();
 
-            // Trả về lỗi cho trường email hoặc username
             if ($errors->has('email')) {
                 return response()->json(['message' => 'Email đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.'], 422);
             }
@@ -38,7 +39,6 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Tên người dùng đã được sử dụng. Vui lòng chọn tên khác.'], 422);
             }
 
-            // Trường hợp lỗi khác
             return response()->json(['message' => 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.'], 422);
         }
 
@@ -54,7 +54,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // Đăng nhập (chỉ token-based)
+    // Đăng nhập (trả về cả AT và RT)
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -62,7 +62,6 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // Kiểm tra email có tồn tại hay không
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
@@ -72,7 +71,6 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Kiểm tra mật khẩu có đúng hay không
         if (!Auth::attempt($credentials)) {
             return response()->json([
                 'field' => 'password',
@@ -80,36 +78,56 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Nếu email và mật khẩu chính xác
         $user = Auth::user();
 
         // Xóa các token cũ
         $user->tokens()->delete();
+        PersonalRefreshToken::where('tokenable_id', $user->id)
+            ->where('tokenable_type', User::class)
+            ->delete();
 
-        // Tạo token mới
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Tạo Access Token (15 phút)
+        $accessToken = $user->createToken('access_token', ['*'], now()->addMinutes(15))->plainTextToken;
+
+        // Tạo Refresh Token (7 ngày)
+        $refreshToken = Str::random(64);
+        PersonalRefreshToken::create([
+            'tokenable_id' => $user->id,
+            'tokenable_type' => User::class,
+            'token' => $refreshToken,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
 
         return response()->json([
             'message' => 'Đăng nhập thành công!',
-            'user' => $user
-        ])->cookie('auth_token', $token, 60); // cookie expires in 60 minutes
+            'user' => $user,
+        ])->cookie('access_token', $accessToken, 15)
+            ->cookie('refresh_token', $refreshToken, 60 * 24 * 7)
+            ->cookie('expires_at', $expiresAt, 15, null, null, false, false) // HttpOnly = false
+            ->cookie('role_id', $user->roleId, 15, null, null, false, false); // HttpOnly = false
     }
 
     // Đăng xuất
     public function logout(Request $request)
     {
         try {
-            // Revoke the current user's token
             $request->user()->currentAccessToken()->delete();
+            PersonalRefreshToken::where('tokenable_id', $request->user()->id)
+                ->where('tokenable_type', User::class)
+                ->update(['revoked_at' => now()]);
 
             return response()->json([
                 'message' => 'Đăng xuất thành công',
-            ], 200)->withoutCookie('auth_token');
+            ], 200)->withoutCookie('access_token')
+                ->withoutCookie('refresh_token')
+                ->withoutCookie('expires_at')
+                ->withoutCookie('role_id');
         } catch (\Exception $e) {
-            // Xử lý lỗi máy chủ trong quá trình đăng xuất
             return response()->json([
                 'message' => 'Đã xảy ra lỗi khi đăng xuất. Vui lòng thử lại.',
-                'error' => $e->getMessage() // Chỉ hiển thị lỗi này trong môi trường phát triển
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -123,54 +141,48 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        return response()->json($user, 200); // Trả về trực tiếp object user
+        return response()->json($user, 200);
     }
 
+    // Refresh Access Token
     public function refreshToken(Request $request)
     {
-        $user = $request->user();
+        $refreshToken = $request->cookie('refresh_token') ?? $request->input('refresh_token');
 
-        // Revoke current token
-        $request->user()->currentAccessToken()->delete();
+        if (!$refreshToken) {
+            return response()->json(['message' => 'Refresh token không được cung cấp'], 401);
+        }
 
-        // Create new token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $rt = PersonalRefreshToken::where('token', $refreshToken)->first();
+
+        if (!$rt || $rt->isExpired() || $rt->isRevoked()) {
+            return response()->json(['message' => 'Refresh token không hợp lệ hoặc đã hết hạn'], 401)
+                ->withoutCookie('access_token')
+                ->withoutCookie('expires_at')
+                ->withoutCookie('role_id');
+        }
+
+        $user = $rt->tokenable;
+
+        // Xóa AT cũ
+        $user->tokens()->delete();
+
+        // Tạo AT mới (15 phút)
+        $newAccessToken = $user->createToken('access_token', ['*'], now()->addMinutes(15))->plainTextToken;
+        $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
 
         return response()->json([
-            'token' => $token,
-            'user' => $user
-        ]);
+
+            'message' => 'Refresh token thành công',
+            'user' => $user,
+            'expires_in' => 900, // 15 phút tính bằng giây
+        ])->cookie('access_token', $newAccessToken, 15, null, null, false, true) // HttpOnly = true
+            ->cookie('expires_at', $expiresAt, 15, null, null, false, false) // HttpOnly = false để client đọc được
+            ->cookie('role_id', $user->roleId, 15, null, null, false, false); // HttpOnly = false
     }
 
 
-    public function verifyToken(Request $request)
-    {
-        // 🛑 Lấy token từ Header Authorization
-        $token = $request->bearerToken();
-
-        if (!$token) {
-            return response()->json(['message' => 'Token không hợp lệ'], 401);
-        }
-
-        // 🔍 Tìm token trong cơ sở dữ liệu
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (!$accessToken) {
-            return response()->json(['message' => 'Token không hợp lệ'], 401);
-        }
-
-        // 🔑 Lấy user từ token
-        $user = $accessToken->tokenable;
-
-        if (!$user) {
-            return response()->json(['message' => 'Người dùng không tồn tại'], 401);
-        }
-
-        return response()->json([
-            'user' => $user
-        ]);
-    }
-
+    // Gửi email reset password>>>>>>> kyvo
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate(['email' => 'required|email|exists:users,email']);
@@ -182,9 +194,8 @@ class AuthController extends Controller
                     $resetUrl = "http://localhost:3000/auth/reset-password?token={$token}&email=" . urlencode($user->email);
                     Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
                 } catch (\Exception $e) {
-                    // Ghi log lỗi để debug
                     \Log::error("Failed to send reset email: " . $e->getMessage());
-                    throw $e; // Ném lỗi để Password::sendResetLink trả về trạng thái thất bại
+                    throw $e;
                 }
             }
         );
@@ -194,7 +205,7 @@ class AuthController extends Controller
             : response()->json(['message' => 'Unable to send email', 'error' => $status], 400);
     }
 
-
+    // Reset password
     public function resetPassword(Request $request)
     {
 
@@ -216,5 +227,78 @@ class AuthController extends Controller
         return $status === Password::PASSWORD_RESET
             ? response()->json(['status' => __($status)], 200)
             : response()->json(['error' => __($status)], 400);
+    }
+
+    public function googleRedirect(Request $request)
+    {
+        // Tạo URL chuyển hướng đến Google
+        $redirectUrl = Socialite::driver('google')
+
+            ->redirect()
+            ->getTargetUrl();
+
+        return response()->json([
+            'message' => 'Redirect to Google login',
+            'redirect_url' => $redirectUrl,
+        ], 200);
+    }
+
+    /**
+     * Xử lý callback từ Google
+     */
+    public function googleCallback(Request $request)
+    {
+        try {
+            // Lấy thông tin người dùng từ Google
+            $googleUser = Socialite::driver('google')
+
+                ->user();
+
+            // Tìm hoặc tạo người dùng trong database
+            $user = User::updateOrCreate(
+                [
+                    'google_id' => $googleUser->id,
+                ],
+                [
+                    'name' => $googleUser->name,
+                    'email' => $googleUser->email,
+                    'google_id' => $googleUser->id,
+                    'password' => Hash::make(Str::random(16)), // Tạo mật khẩu ngẫu nhiên
+                ]
+            );
+
+            // Xóa các token cũ
+            $user->tokens()->delete();
+            PersonalRefreshToken::where('tokenable_id', $user->id)
+                ->where('tokenable_type', User::class)
+                ->delete();
+
+            // Tạo Access Token (15 phút)
+            $accessToken = $user->createToken('access_token', ['*'], now()->addMinutes(15))->plainTextToken;
+
+            // Tạo Refresh Token (7 ngày)
+            $refreshToken = Str::random(64);
+            PersonalRefreshToken::create([
+                'tokenable_id' => $user->id,
+                'tokenable_type' => User::class,
+                'token' => $refreshToken,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
+
+            return response()->json([
+                'message' => 'Đăng nhập bằng Google thành công!',
+                'user' => $user,
+            ])->cookie('access_token', $accessToken, 15)
+                ->cookie('refresh_token', $refreshToken, 60 * 24 * 7)
+                ->cookie('expires_at', $expiresAt, 15, null, null, false, false) // HttpOnly = false
+                ->cookie('role_id', $user->roleId, 15, null, null, false, false); // HttpOnly = false
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Đăng nhập bằng Google thất bại.',
+                'error' => $e->getMessage(),
+            ], 401);
+        }
     }
 }

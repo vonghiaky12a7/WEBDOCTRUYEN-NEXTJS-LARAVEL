@@ -3,36 +3,17 @@ import { User } from "@/models/user";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const userService = {
-  async getUsers(): Promise<User[]> {
-    try {
-      const response = await axiosInstance.get("/api/users");
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      throw error;
-    }
+  getUsers: async (): Promise<User[]> => {
+    const response = await axiosInstance.get("/users");
+    return response.data;
   },
 
-  async updateUserRole(userId: string, roleId: number): Promise<User> {
-    try {
-      const response = await axiosInstance.put(`/api/users/${userId}`, {
-        roleId,
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      throw error;
-    }
+  updateUserRole: async (userId: string, roleId: number): Promise<User> => {
+    const response = await axiosInstance.put(`/users/${userId}`, { roleId });
+    return response.data;
   },
 
-  async deleteUser(userId: string): Promise<void> {
-    try {
-      await axiosInstance.delete(`/api/users/${userId}`);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      throw error;
-    }
+  deleteUser: async (userId: string): Promise<void> => {
+    await axiosInstance.delete(`/users/${userId}`);
   },
 };
-
-

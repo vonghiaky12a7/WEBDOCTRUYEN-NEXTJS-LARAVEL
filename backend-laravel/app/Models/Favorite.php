@@ -12,7 +12,7 @@ use Laravel\Sanctum\HasApiTokens;
 class Favorite extends Model
 {
     use HasApiTokens, HasFactory, Notifiable;
-    protected $table = 'users'; // Chỉ định tên bảng
+    protected $table = 'favorites'; // Chỉ định tên bảng
 
     /**
      * Indicates if the IDs are auto-incrementing.

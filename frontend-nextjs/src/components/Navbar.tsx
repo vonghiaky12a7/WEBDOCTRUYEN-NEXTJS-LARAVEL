@@ -5,10 +5,11 @@ import Link from "next/link";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Avatar from "./Avatar";
 import { useAuthStore } from "@/stores/authStore";
-import ButtonLink from "./ButtonLink";
 import ImageHero from "./Image";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Button } from "@heroui/react";
+import { User } from "@/models/user";
 
 const navItems = [
   { href: "/", label: "Trang Chủ" },
@@ -18,19 +19,27 @@ const navItems = [
 ];
 
 export default function Navbar() {
-  const { isLogged } = useAuthStore();
+  const { isLogged, user } = useAuthStore();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const toggleDrawer = () => {
     setIsDrawerOpen(!isDrawerOpen);
   };
 
+  // Lọc navItems dựa trên roleId
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.href === "/admin/user") {
+      return user?.roleId === 1; // Chỉ hiển thị "Quản lý" nếu roleId là 1
+    }
+    return true; // Giữ lại các mục khác
+  });
+
   return (
     <nav className="w-full bg-white dark:bg-gray-900 shadow-md mb-4">
       <div className="flex items-center justify-between mx-auto py-4 px-2 md:px-20">
         <Logo />
         <div className="flex items-center space-x-3 md:space-x-5 md:order-2">
-          <RightSection isLogged={isLogged} />
+          <RightSection isLogged={isLogged} user={user} />
           <button
             className="md:hidden p-1"
             onClick={toggleDrawer}
@@ -39,7 +48,7 @@ export default function Navbar() {
             <Menu className="w-5 h-5" />
           </button>
         </div>
-        <NavLinks />
+        <NavLinks navItems={filteredNavItems} /> {/* Truyền filteredNavItems */}
       </div>
 
       {/* Drawer tự xây dựng */}
@@ -58,7 +67,7 @@ export default function Navbar() {
             </button>
           </div>
           <ul className="flex flex-col space-y-6">
-            {navItems.map((item, index) => (
+            {filteredNavItems.map((item, index) => (
               <li key={index}>
                 <Link
                   href={item.href}
@@ -90,14 +99,36 @@ const Logo = () => (
   </Link>
 );
 
-const RightSection = ({ isLogged }: { isLogged: boolean }) => (
+const RightSection = ({
+  isLogged,
+  user,
+}: {
+  isLogged: boolean;
+  user: User | null;
+}) => (
   <div className="flex items-center space-x-3 md:space-x-5">
     <ThemeSwitcher />
-    {isLogged ? <Avatar /> : <ButtonLink title="Đăng nhập" />}
+    {isLogged ? (
+      <Avatar user={user} />
+    ) : (
+      <Button
+        as={Link}
+        color="primary"
+        className="bg-primary-500 hover:bg-primary-600 text-white"
+        href="/auth/signin"
+        variant="solid"
+      >
+        Đăng nhập
+      </Button>
+    )}
   </div>
 );
 
-const NavLinks = () => (
+const NavLinks = ({
+  navItems,
+}: {
+  navItems: { href: string; label: string }[];
+}) => (
   <div className="hidden md:flex md:w-auto md:order-1">
     <ul className="flex flex-col md:flex-row md:space-x-5 font-medium border border-gray-100 rounded-lg p-2 md:p-0 md:border-0 dark:border-gray-700">
       {navItems.map((item, index) => (

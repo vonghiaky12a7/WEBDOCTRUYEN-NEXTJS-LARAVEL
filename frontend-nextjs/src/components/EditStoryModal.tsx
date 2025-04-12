@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StoryService } from "@/services/storyService";
 import { Story } from "@/models/story";
+import { ImgService } from "@/services/imgService";
 
 interface EditStoryModalProps {
   story: Story;
@@ -23,6 +24,9 @@ export default function EditStoryModal({
   });
 
   const [previewImage, setPreviewImage] = useState<string>(story.coverImage);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function handleInputChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -44,27 +48,41 @@ export default function EditStoryModal({
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setPreviewImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   }
 
-  async function handleSave() {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      const coverImageFile = previewImage
-        ? new File([previewImage], "cover.jpg", { type: "image/jpeg" })
-        : undefined;
+      let coverImageUrl = formData.coverImage;
+
+      if (imageFile) {
+        coverImageUrl = await ImgService.uploadStoryBackground(
+          imageFile,
+          formData.title
+        );
+      }
+
       await StoryService.updateStory(story.storyId, {
         ...formData,
-        coverImageFile,
+        coverImage: coverImageUrl,
       });
+
       onSave();
       onClose();
     } catch (error) {
-      console.error("Lỗi khi cập nhật truyện:", error);
+      console.error("Error updating story:", error);
+      setError("Có lỗi xảy ra khi cập nhật truyện");
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
@@ -142,10 +160,11 @@ export default function EditStoryModal({
           {/* Nút Lưu và Hủy */}
           <div className="flex justify-end space-x-2">
             <button
-              onClick={handleSave}
+              onClick={handleSubmit}
               className="bg-green-500 text-white px-4 py-2 rounded-md"
+              disabled={isSubmitting}
             >
-              Lưu
+              {isSubmitting ? "Đang lưu..." : "Lưu"}
             </button>
             <button
               onClick={onClose}
@@ -154,6 +173,7 @@ export default function EditStoryModal({
               Hủy
             </button>
           </div>
+          {error && <p className="text-red-500 mt-2">{error}</p>}
         </div>
       </div>
     </div>

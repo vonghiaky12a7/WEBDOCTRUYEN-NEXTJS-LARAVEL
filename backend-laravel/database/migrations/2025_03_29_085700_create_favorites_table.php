@@ -12,7 +12,8 @@ class CreateFavoritesTable extends Migration
             $table->uuid('id')->primary();
             $table->uuid('userId');
             $table->uuid('storyId');
-
+            $table->timestamps();
+            
             // Foreign keys
             $table->foreign('userId')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('storyId')->references('storyId')->on('stories')->onDelete('cascade');

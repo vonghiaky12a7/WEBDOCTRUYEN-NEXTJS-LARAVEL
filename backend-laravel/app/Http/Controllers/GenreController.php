@@ -7,77 +7,58 @@ use Illuminate\Http\Request;
 
 class GenreController extends Controller
 {
-    /**
-     * Lấy tất cả thể loại
-     */
     public function index()
     {
-        $genres = Genre::all();
+        $genres = Genre::select('genreId', 'genreName')->get();
+
         return response()->json($genres);
     }
 
-    /**
-     * Tạo thể loại mới
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|unique:genres,name',
+            'genreName' => 'required|string|unique:genres,genreName',
         ]);
 
         $genre = Genre::create([
-            'name' => $request->name,
+            'genreName' => $request->genreName,
         ]);
 
-        return response()->json($genre, 201);
+        return response()->json([
+            'genreId' => $genre->genreId,
+            'genreName' => $genre->genreName,
+        ], 201);
     }
 
-    /**
-     * Lấy chi tiết thể loại
-     */
     public function show($genreId)
     {
-        $genre = Genre::find($genreId);
-
-        if (!$genre) {
-            return response()->json(['message' => 'Genre not found'], 404);
-        }
+        $genre = Genre::select('genreId', 'genreName')
+            ->where('genreId', $genreId)
+            ->firstOrFail();
 
         return response()->json($genre);
     }
 
-    /**
-     * Cập nhật thể loại
-     */
     public function update(Request $request, $genreId)
     {
-        $genre = Genre::find($genreId);
-
-        if (!$genre) {
-            return response()->json(['message' => 'Genre not found'], 404);
-        }
+        $genre = Genre::where('genreId', $genreId)->firstOrFail();
 
         $request->validate([
-            'name' => 'required|string|unique:genres,name,' . $genreId,
+            'genreName' => 'required|string|unique:genres,genreName,' . $genreId . ',genreId',
         ]);
 
-        $genre->name = $request->name;
+        $genre->genreName = $request->genreName;
         $genre->save();
 
-        return response()->json($genre);
+        return response()->json([
+            'genreId' => $genre->genreId,
+            'genreName' => $genre->genreName,
+        ]);
     }
 
-    /**
-     * Xóa thể loại
-     */
     public function destroy($genreId)
     {
-        $genre = Genre::find($genreId);
-
-        if (!$genre) {
-            return response()->json(['message' => 'Genre not found'], 404);
-        }
-
+        $genre = Genre::where('genreId', $genreId)->firstOrFail();
         $genre->delete();
 
         return response()->json(['message' => 'Genre deleted successfully']);

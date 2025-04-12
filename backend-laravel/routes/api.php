@@ -6,13 +6,18 @@ use App\Http\Controllers\GenreController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UploadController;
-
+use App\Http\Controllers\ReadingProgressController;
+use App\Http\Controllers\ChapterController;
+use App\Http\Controllers\StoryFavoriteController;
+use App\Http\Controllers\StoryCommentController;
+use App\Http\Controllers\StoryRatingController;
 // Auth routes
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
+    Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
 });
 
 
@@ -21,10 +26,13 @@ Route::middleware('auth:sanctum')->group(function () {
         function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
-            Route::post('/verify-token', [AuthController::class, 'verifyToken']);
-            Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+
         }
     );
+    Route::post('/reading-progress', [ReadingProgressController::class, 'updateProgress']);
+    Route::get('/reading-progress/{storyId}', [ReadingProgressController::class, 'getProgress']);
+
+
     // User routes with admin middleware
     Route::middleware('admin')->prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
@@ -33,28 +41,34 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-Route::post('/upload/single', [UploadController::class, 'uploadSingleImage']);
-Route::post('/upload/multiple', [UploadController::class, 'uploadMultipleImages']);
 
-// Public story routes
-Route::prefix('stories')->group(function () {
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::post('/upload/single', [UploadController::class, 'uploadSingleImage']);
+    Route::post('/upload/multiple', [UploadController::class, 'uploadMultipleImages']);
+});
+
+
+// Public story routes with rate limiting
+Route::middleware(['throttle:60,1'])->prefix('stories')->group(function () {
     Route::get('/', [StoryController::class, 'index']);
     Route::get('/list', [StoryController::class, 'list']);
     Route::get('/top', [StoryController::class, 'top']);
     Route::get('/{storyId}', [StoryController::class, 'show']);
-    Route::get('/{storyId}/chapters', [StoryController::class, 'getChapters']);
-    Route::get('/{storyId}/chapter/{chapterId}', [StoryController::class, 'getChapter']);
-    Route::get('/{storyId}/ratings', [StoryController::class, 'getRatings']);
-    Route::get('/{storyId}/comments', [StoryController::class, 'getComments']);
+    Route::get('/{storyId}/chapters', [ChapterController::class, 'getChapters']);
+    Route::get('/{storyId}/chapter/{chapterId}', [ChapterController::class, 'getChapter']);
+    Route::get('/{storyId}/ratings', [StoryRatingController::class, 'getRatings']);
+    Route::get('/{storyId}/comments', [StoryCommentController::class, 'getComments']);
 });
 
 // Protected story routes
 Route::middleware('auth:sanctum')->prefix('stories')->group(function () {
-    Route::post('/favorite', [StoryController::class, 'addToFavorites']);
-    Route::delete('/favorite', [StoryController::class, 'removeFromFavorites']);
-    Route::get('/favorites/{userId}', [StoryController::class, 'getFavorites']);
-    Route::post('/comment', [StoryController::class, 'addComment']);
-    Route::post('/rating', [StoryController::class, 'addRating']);
+    Route::post('/favorite', [StoryFavoriteController::class, 'addToFavorites']);
+    Route::delete('/favorite', [StoryFavoriteController::class, 'removeFromFavorites']);
+    Route::get('/favorites/{userId}', [StoryFavoriteController::class, 'getFavorites']);
+    Route::post('/favorites/check', [StoryFavoriteController::class, 'checkFavoriteStatus']);
+    Route::post('/comment', [StoryCommentController::class, 'addComment']);
+    Route::delete('/comments/{commentId}', [StoryCommentController::class, 'destroyById']);
+    Route::post('/rating', [StoryRatingController::class, 'addRating']);
 
     // Admin-only story operations
     Route::middleware('admin')->group(function () {
@@ -63,9 +77,9 @@ Route::middleware('auth:sanctum')->prefix('stories')->group(function () {
         Route::delete('/{storyId}', [StoryController::class, 'destroy']);
 
         // Chapter admin routes
-        Route::post('/{storyId}/chapters', [StoryController::class, 'storeChapter']);
-        Route::put('/{storyId}/chapter/{chapterId}', [StoryController::class, 'updateChapter']);
-        Route::delete('/{storyId}/chapter/{chapterId}', [StoryController::class, 'destroyChapter']);
+        Route::post('/{storyId}/chapters', [ChapterController::class, 'storeChapter']);
+        Route::put('/{storyId}/chapter/{chapterId}', [ChapterController::class, 'updateChapter']);
+        Route::delete('/{storyId}/chapter/{chapterId}', [ChapterController::class, 'destroyChapter']);
     });
 });
 
