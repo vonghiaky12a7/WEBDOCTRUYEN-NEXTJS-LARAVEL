@@ -36,5 +36,8 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
-
+    'vnpay' => [
+        'tmn_code' => env('SERVICES_VNPAY_TMN_CODE'),
+        'hash_secret' => env('SERVICES_VNPAY_HASH_SECRET'),
+    ],
 ];

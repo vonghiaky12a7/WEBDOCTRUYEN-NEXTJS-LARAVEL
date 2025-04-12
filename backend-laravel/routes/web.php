@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\Redis;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -15,4 +15,19 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::get('/redis-keys', function () {
+    try {
+        $redis = Redis::connection('cache');
+        $keys = $redis->keys('*');
+
+        if (empty($keys)) {
+            return response()->json(['message' => 'No keys found in Redis'], 200);
+        }
+
+        return response()->json(['keys' => $keys], 200);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 });

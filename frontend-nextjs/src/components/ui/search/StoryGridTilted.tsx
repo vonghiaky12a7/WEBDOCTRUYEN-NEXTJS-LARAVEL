@@ -1,7 +1,5 @@
-// components/search/StoryGrid.tsx
 "use client";
 
-import React, { useState } from "react";
 import Link from "next/link";
 import { Pagination } from "@heroui/react";
 import { Story } from "@/models/story";
@@ -15,31 +13,41 @@ interface StoryGridProps {
   isLoading: boolean;
   searchTerm: string;
   priorityCount: number;
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
 }
 
 export default function StoryGrid({
   stories,
-  genres,
   storyRatings,
   isLoading,
   searchTerm,
+  totalPages,
+  currentPage,
+  onPageChange,
 }: StoryGridProps) {
-  // State for current page
-  const [currentPage, setCurrentPage] = useState(1);
-  const storiesPerPage = 8; // 8 stories per page
+  const renderStars = (rating: number | undefined) => {
+    if (rating === undefined || isNaN(rating)) rating = 0;
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-  // Calculate total pages
-  const totalPages = Math.ceil(stories.length / storiesPerPage);
-
-  // Slice stories for the current page
-  const startIndex = (currentPage - 1) * storiesPerPage;
-  const endIndex = startIndex + storiesPerPage;
-  const paginatedStories = stories.slice(startIndex, endIndex);
-
-  // Function to render star rating
-  const renderRating = (rating: number | undefined) => {
-    if (rating === undefined) return "0.0";
-    return rating.toFixed(1);
+    return (
+      <div className="flex items-center">
+        {[...Array(fullStars)].map((_, i) => (
+          <span key={i} className="text-yellow-400 text-xs">
+            ★
+          </span>
+        ))}
+        {hasHalfStar && <span className="text-yellow-400 text-xs">☆</span>}
+        {[...Array(emptyStars)].map((_, i) => (
+          <span key={i + fullStars} className="text-gray-300 text-xs">
+            ★
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -65,7 +73,7 @@ export default function StoryGrid({
       ) : (
         <div className="flex-grow">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {paginatedStories.map((story) => (
+            {stories.map((story) => (
               <Link
                 key={story.storyId}
                 href={`/stories/${story.storyId}`}
@@ -76,8 +84,8 @@ export default function StoryGrid({
                   altText={`${story.title} Cover`}
                   captionText={`${story.title} - ${story.author}`}
                   containerHeight="400px"
-                  containerWidth="100%"
-                  imageHeight="400px"
+                  containerWidth="90%"
+                  imageHeight="350px"
                   imageWidth="100%"
                   rotateAmplitude={12}
                   scaleOnHover={1.1}
@@ -86,7 +94,6 @@ export default function StoryGrid({
                   displayOverlayContent={true}
                   overlayContent={
                     <div className="p-3 text-white bg-black/60 w-full rounded-b-[15px]">
-                      {/* Top Section: Title and Author */}
                       <div className="space-y-0.5">
                         <h3 className="font-bold text-base uppercase truncate">
                           {story.title}
@@ -95,32 +102,24 @@ export default function StoryGrid({
                           Tác giả: {story.author}
                         </p>
                       </div>
-
-                      {/* Bottom Section: Genres, Chapters, and Rating */}
                       <div className="mt-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                          {story.genreIds.map((genreId) => {
-                            const genre = genres.find(
-                              (g) => g.genreId === genreId
-                            );
-                            return genre ? (
-                              <span
-                                key={genreId}
-                                className="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] uppercase"
-                              >
-                                {genre.genreName}
-                              </span>
-                            ) : null;
-                          })}
+                          {story.genres.map((genre) => (
+                            <span
+                              key={genre.genreId}
+                              className="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] uppercase"
+                            >
+                              {genre.genreName}
+                            </span>
+                          ))}
                         </div>
-                        <div className="flex justify-between text-xs">
+                        <div className="flex justify-between items-center text-xs">
                           <span>{story.chapters || 0} chương</span>
-                          <span>
-                            Rating:{" "}
-                            {renderRating(
+                          <div className="flex items-center gap-1">
+                            {renderStars(
                               story.rating || storyRatings[story.storyId]
                             )}
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -132,18 +131,17 @@ export default function StoryGrid({
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-8 justify-center flex">
           <Pagination
             total={totalPages}
-            initialPage={1}
+            page={currentPage}
             showControls
             variant="bordered"
             classNames={{
               item: "h-8 w-8",
             }}
-            onChange={(page) => setCurrentPage(page)}
+            onChange={onPageChange}
           />
         </div>
       )}

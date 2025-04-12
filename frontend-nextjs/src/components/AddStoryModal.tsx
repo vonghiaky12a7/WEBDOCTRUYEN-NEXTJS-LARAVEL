@@ -27,6 +27,7 @@ export default function AddStoryModal({ onClose, onSave }: AddStoryModalProps) {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,9 +86,11 @@ export default function AddStoryModal({ onClose, onSave }: AddStoryModalProps) {
     }
   }
 
-  async function handleSave() {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      setLoading(true);
       let coverImageUrl = "";
 
       // Upload ảnh bìa nếu có
@@ -98,32 +101,20 @@ export default function AddStoryModal({ onClose, onSave }: AddStoryModalProps) {
         );
       }
 
-      const newStory = {
+      await StoryService.createStory({
         ...formData,
-        storyId: generateId(),
-        coverImage: coverImageUrl, // Sử dụng URL từ Cloudinary
-      };
+        coverImage: coverImageUrl,
+      });
 
-      await StoryService.createStory(newStory);
       onSave();
       onClose();
     } catch (error) {
-      console.error("Lỗi khi thêm truyện:", error);
-      setError("Không thể thêm truyện");
+      console.error("Error creating story:", error);
+      setError("Có lỗi xảy ra khi tạo truyện mới");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
-  }
-
-  function generateId(): string {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let id = "";
-    for (let i = 0; i < 5; i++) {
-      id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
@@ -155,75 +146,78 @@ export default function AddStoryModal({ onClose, onSave }: AddStoryModalProps) {
         <div className="w-2/3 pl-4">
           <h2 className="text-xl font-bold mb-3">Thêm truyện mới</h2>
 
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            className="w-full border p-2 mb-2 rounded"
-            placeholder="Tên truyện"
-          />
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              className="w-full border p-2 mb-2 rounded"
+              placeholder="Tên truyện"
+            />
 
-          <input
-            type="text"
-            name="author"
-            value={formData.author}
-            onChange={handleInputChange}
-            className="w-full border p-2 mb-2 rounded"
-            placeholder="Tác giả"
-          />
+            <input
+              type="text"
+              name="author"
+              value={formData.author}
+              onChange={handleInputChange}
+              className="w-full border p-2 mb-2 rounded"
+              placeholder="Tác giả"
+            />
 
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            className="w-full border p-2 mb-2 rounded"
-            placeholder="Mô tả truyện"
-            rows={4}
-          ></textarea>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              className="w-full border p-2 mb-2 rounded"
+              placeholder="Mô tả truyện"
+              rows={4}
+            ></textarea>
 
-          <div className="mb-2">
-            <p className="font-semibold mb-1">Thể loại:</p>
-            {loading ? (
-              <p className="text-gray-500">Đang tải thể loại...</p>
-            ) : error ? (
-              <p className="text-red-500">{error}</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-1">
-                {genres.map((genre) => (
-                  <label
-                    key={genre.genreId}
-                    className="inline-flex items-center mr-3"
-                  >
-                    <input
-                      type="checkbox"
-                      value={genre.genreId}
-                      checked={formData.genreIds.includes(genre.genreId)}
-                      onChange={handleGenreChange}
-                      className="mr-1"
-                    />
-                    {genre.genreName}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="mb-2">
+              <p className="font-semibold mb-1">Thể loại:</p>
+              {loading ? (
+                <p className="text-gray-500">Đang tải thể loại...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1">
+                  {genres.map((genre) => (
+                    <label
+                      key={genre.genreId}
+                      className="inline-flex items-center mr-3"
+                    >
+                      <input
+                        type="checkbox"
+                        value={genre.genreId}
+                        checked={formData.genreIds.includes(genre.genreId)}
+                        onChange={handleGenreChange}
+                        className="mr-1"
+                      />
+                      {genre.genreName}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="flex justify-end space-x-2 mt-4">
-            <button
-              onClick={handleSave}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
-              disabled={loading}
-            >
-              {loading ? "Đang thêm..." : "Thêm"}
-            </button>
-            <button
-              onClick={onClose}
-              className="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition"
-            >
-              Hủy
-            </button>
-          </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                type="submit"
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Đang thêm..." : "Thêm"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition"
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

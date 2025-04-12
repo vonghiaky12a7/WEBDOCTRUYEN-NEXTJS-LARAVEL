@@ -1,53 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// services/ratingService.ts
 import axiosInstance from "@/utils/axiosInstance";
 
-// Không cần import axios nữa vì chúng ta sẽ dùng axiosInstance
-// const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL + "/stories";
-// Vì axiosInstance đã có baseURL là "http://localhost:8000", ta chỉ cần dùng đường dẫn tương đối
-
 export const RatingService = {
-  // Thêm hoặc cập nhật rating
-  async addRating(
+  addRating: async (
     userId: string,
     storyId: string,
     rating: number
-  ): Promise<any> {
-    try {
-      const response = await axiosInstance.post("/stories/rating", {
-        userId,
-        storyId,
-        rating,
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error adding rating:", error);
-      throw new Error("Không thể thêm đánh giá.");
-    }
+  ): Promise<any> => {
+    const response = await axiosInstance.post("/stories/rating", {
+      userId,
+      storyId,
+      rating,
+    });
+    return response.data;
   },
 
-  // Lấy thông tin ratings của một truyện
-  async getRatingsByStoryId(storyId: string): Promise<any> {
-    try {
-      const response = await axiosInstance.get(
-        `/stories/${storyId}/ratings`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching ratings for story ${storyId}:`, error);
-      return { average: 0, count: 0, ratings: [] };
-    }
+  getRatingsByStoryId: async (storyId: string): Promise<any> => {
+    const response = await axiosInstance.get(`/stories/${storyId}/ratings`);
+    return response.data;
   },
 
-  async getRatingsByStoryIds(storyIds: string[]) {
-    try {
-      const response = await axiosInstance.get("/ratings", {
-        params: { storyIds: storyIds.join(",") },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching ratings:", error);
-      return {};
-    }
+  getRatingsByStoryIds: async (storyIds: string[]) => {
+    const response = await axiosInstance.get("/ratings", {
+      params: { storyIds: storyIds.join(",") },
+    });
+    return response.data;
   },
-
 };

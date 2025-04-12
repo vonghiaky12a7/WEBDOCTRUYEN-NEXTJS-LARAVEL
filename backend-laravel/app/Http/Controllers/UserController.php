@@ -9,19 +9,13 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of all users.
-     */
     public function index(Request $request)
     {
-        // Không cần thay đổi logic, chỉ cần đảm bảo middleware auth:sanctum đã xác thực
         $users = User::all();
+
         return response()->json($users);
     }
 
-    /**
-     * Update the specified user.
-     */
     public function update(Request $request, $id)
     {
         $user = User::find($id);
@@ -54,9 +48,6 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Remove the specified user.
-     */
     public function destroy(Request $request, $id)
     {
         $user = User::find($id);
@@ -65,8 +56,7 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        // Prevent deleting yourself (dùng $request->user() thay vì auth())
-        $currentUser = $request->user(); // Lấy user từ token
+        $currentUser = $request->user();
         if ($user->id === $currentUser->id) {
             return response()->json(['message' => 'Cannot delete your own account'], 403);
         }

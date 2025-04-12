@@ -11,34 +11,38 @@ import { motion } from "framer-motion";
 
 export default function StoryPage() {
   const [stories, setStories] = useState<Story[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingStory, setEditingStory] = useState<Story | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    fetchStories();
+    const fetchData = async () => {
+      try {
+        const data = await StoryService.getAllStories();
+        setStories(data);
+      } catch (error) {
+        console.error("Error loading stories:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  async function fetchStories() {
-    try {
-      const data = await StoryService.fetchStories();
-      setStories(data);
-    } catch (error) {
-      console.error("Lỗi tải dữ liệu:", error);
-    }
-  }
-
-  async function handleDelete(storyId: string) {
+  const handleDelete = async (storyId: string) => {
     if (!confirm("Bạn có chắc chắn muốn xóa truyện này?")) return;
+
     try {
       await StoryService.deleteStory(storyId);
       setStories((prevStories) =>
         prevStories.filter((story) => story.storyId !== storyId)
       );
     } catch (error) {
-      console.error("Lỗi khi xóa truyện:", error);
+      console.error("Error deleting story:", error);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -157,14 +161,40 @@ export default function StoryPage() {
           <EditStoryModal
             story={editingStory}
             onClose={() => setEditingStory(null)}
-            onSave={fetchStories}
+            onSave={() => {
+              setIsLoading(true);
+              const fetchData = async () => {
+                try {
+                  const data = await StoryService.getAllStories();
+                  setStories(data);
+                } catch (error) {
+                  console.error("Error loading stories:", error);
+                } finally {
+                  setIsLoading(false);
+                }
+              };
+              fetchData();
+            }}
           />
         )}
 
         {isAddModalOpen && (
           <AddStoryModal
             onClose={() => setIsAddModalOpen(false)}
-            onSave={fetchStories}
+            onSave={() => {
+              setIsLoading(true);
+              const fetchData = async () => {
+                try {
+                  const data = await StoryService.getAllStories();
+                  setStories(data);
+                } catch (error) {
+                  console.error("Error loading stories:", error);
+                } finally {
+                  setIsLoading(false);
+                }
+              };
+              fetchData();
+            }}
           />
         )}
       </div>

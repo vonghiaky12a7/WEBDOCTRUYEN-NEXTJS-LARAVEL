@@ -59,28 +59,45 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuthStatus: async () => {
-        const isValid = await get().isTokenValid();
-        if (!isValid) {
-          try {
-            await get().refreshToken(); // Thử refresh nếu token hết hạn
-          } catch (error) {
-            get().clearAuth();
-            throw error;
-          }
+        const { isTokenValid, refreshToken, clearAuth, isLogged } = get();
+        const refreshTokenCookie = getCookie("refresh_token");
+
+        // Nếu không có refresh_token và không đăng nhập, không cần làm gì
+        if (!refreshTokenCookie && !isLogged) {
+          clearAuth(); // Đảm bảo trạng thái sạch
+          return;
         }
 
-        const currentUser = get().user;
-        if (!currentUser) {
-          try {
-            const user = await authService.getProfile();
-            set({ user, isLogged: true });
-          } catch (error) {
-            console.error("Error fetching user profile:", error);
-            get().clearAuth();
-            throw error;
+        const isValid = await isTokenValid();
+        if (!isValid) {
+          if (refreshTokenCookie) {
+            try {
+              await refreshToken();
+              const user = await authService.getProfile();
+              set({ user, isLogged: true });
+            } catch (error) {
+              console.error("Refresh token failed in checkAuthStatus:", error);
+              clearAuth();
+              throw error;
+            }
+          } else {
+            clearAuth();
+            throw new Error("No valid refresh token available");
           }
         } else {
-          set({ isLogged: true });
+          const currentUser = get().user;
+          if (!currentUser) {
+            try {
+              const user = await authService.getProfile();
+              set({ user, isLogged: true });
+            } catch (error) {
+              console.error("Error fetching user profile:", error);
+              clearAuth();
+              throw error;
+            }
+          } else {
+            set({ isLogged: true });
+          }
         }
       },
 

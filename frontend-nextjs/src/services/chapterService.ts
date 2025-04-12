@@ -5,68 +5,45 @@ import axiosInstance from "@/utils/axiosInstance";
 const API_URL = "/stories";
 
 export const ChapterService = {
-  async getChaptersByStory(storyId: string) {
-    try {
-      const response = await axiosInstance.get(
-        `${API_URL}/${storyId}/chapters`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching chapters:", error);
-      throw error;
-    }
+  getChaptersByStory: async (storyId: string) => {
+    const response = await axiosInstance.get(`${API_URL}/${storyId}/chapters`);
+    return response.data;
   },
 
-  async getChapter(storyId: string, chapterId: string) {
-    try {
-      const response = await axiosInstance.get(
-        `${API_URL}/${storyId}/chapter/${chapterId}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching chapter:", error);
-      throw error;
-    }
+  getChapter: async (storyId: string, chapterId: string) => {
+    const response = await axiosInstance.get(
+      `${API_URL}/${storyId}/chapter/${chapterId}`
+    );
+    return response.data;
   },
 
-  async createChapter(
+  createChapter: async (
     storyId: string,
     chapterData: { title: string; chapterNumber: number; imageUrls: string[] }
-  ) {
-    try {
-      const response = await axiosInstance.post(
-        `${API_URL}/${storyId}/chapters`,
-        chapterData
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error creating chapter:", error);
-      throw error;
-    }
+  ) => {
+    const response = await axiosInstance.post(
+      `${API_URL}/${storyId}/chapters`,
+      chapterData
+    );
+    return response.data;
   },
 
-  async updateChapter(storyId: string, chapterId: string, chapterData: any) {
-    try {
-      const response = await axiosInstance.put(
-        `${API_URL}/${storyId}/chapter/${chapterId}`,
-        chapterData
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error updating chapter:", error);
-      throw error;
-    }
+  updateChapter: async (
+    storyId: string,
+    chapterId: string,
+    chapterData: any
+  ) => {
+    const response = await axiosInstance.put(
+      `${API_URL}/${storyId}/chapter/${chapterId}`,
+      chapterData
+    );
+    return response.data;
   },
 
-  async deleteChapter(storyId: string, chapterId: string) {
-    try {
-      const response = await axiosInstance.delete(
-        `${API_URL}/${storyId}/chapter/${chapterId}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error deleting chapter:", error);
-      throw error;
-    }
+  deleteChapter: async (storyId: string, chapterId: string) => {
+    const response = await axiosInstance.delete(
+      `${API_URL}/${storyId}/chapter/${chapterId}`
+    );
+    return response.data;
   },
 };

@@ -75,8 +75,55 @@ export default function Signin() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`;
+  const handleGoogleLogin = async () => {
+    try {
+      const response = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Assuming the backend returns tokens and a redirect URL
+        if (data.access_token && data.refresh_token && data.redirect_url) {
+          // Store tokens (example using localStorage - consider using cookies for better security)
+          localStorage.setItem("access_token", data.access_token);
+          localStorage.setItem("refresh_token", data.refresh_token);
+
+          // Redirect the user
+          window.location.href = data.redirect_url;
+        } else {
+          console.error("Invalid response from Google login API:", data);
+          addToast({
+            title: "Error",
+            description: "Google login failed. Please try again.",
+            color: "danger",
+            timeout: 2500,
+            shouldShowTimeoutProgress: true,
+          });
+        }
+      } else {
+        console.error("Google login API request failed:", response.status, response.statusText);
+        addToast({
+          title: "Error",
+          description: "Google login failed. Please try again.",
+          color: "danger",
+          timeout: 2500,
+          shouldShowTimeoutProgress: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error during Google login:", error);
+      addToast({
+        title: "Error",
+        description: "Google login failed. Please try again.",
+        color: "danger",
+        timeout: 2500,
+        shouldShowTimeoutProgress: true,
+      });
+    }
   };
 
   return (

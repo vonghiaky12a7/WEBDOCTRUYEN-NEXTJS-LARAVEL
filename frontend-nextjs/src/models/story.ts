@@ -4,7 +4,7 @@ export interface Story {
   author: string;
   description: string;
   coverImage: string;
-  genreIds: number[];
+  genres: { genreId: number; genreName: string }[];
   chapters?: number;
   releaseDate: string;
   rating?: number;

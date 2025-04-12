@@ -1,4 +1,3 @@
-// services/authService.ts
 import axiosInstance from "@/utils/axiosInstance";
 
 export const authService = {
@@ -33,6 +32,12 @@ export const authService = {
 
   refreshToken: async () => {
     const response = await axiosInstance.post("/auth/refresh-token", null);
+    return response.data;
+  },
+
+  // Thêm phương thức để lấy URL đăng nhập Google
+  googleLogin: async () => {
+    const response = await axiosInstance.get("/auth/google");
     return response.data;
   },
 };

@@ -1,7 +1,9 @@
 "use client";
 
 import Breadcrumb from "@/components/Breadcrumbs";
-import DetailStory from "@/components/DetailStory";
+import DetailStory from "@/components/ui/detail-story/DetailStory";
+
+
 
 export default function Page() {
   return (

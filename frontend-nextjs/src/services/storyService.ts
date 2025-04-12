@@ -1,155 +1,103 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// services/storyService.ts
 import axiosInstance from "@/utils/axiosInstance";
 import { Story } from "@/models/story";
 import { Genre } from "@/models/genre";
-import axios from "axios";
 
+// API endpoints
 const STORY_API_URL = "/stories";
 const GENRE_API_URL = "/genres";
 
+// Sort options
+const SORT_OPTIONS = {
+  NEWEST: "newest",
+  OLDEST: "oldest",
+  RATING: "rating",
+} as const;
+
 export const StoryService = {
-  async fetchStories(): Promise<Story[]> {
-    try {
-      const response = await axiosInstance.get(STORY_API_URL);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching stories:", error);
-      throw new Error("Không thể tải danh sách truyện.");
-    }
+  // Basic CRUD operations
+  getAllStories: async (): Promise<Story[]> => {
+    const response = await axiosInstance.get(STORY_API_URL);
+    return response.data.data;
   },
 
-  async fetchStoryById(id: string): Promise<Story> {
-    try {
-      const response = await axiosInstance.get(`${STORY_API_URL}/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching story ${id}:`, error);
-      throw new Error(`Không thể tải truyện với ID ${id}`);
-    }
+  getStoryById: async (id: string): Promise<Story> => {
+    const response = await axiosInstance.get(`${STORY_API_URL}/${id}`);
+    return response.data;
   },
 
-  async fetchStoriesDesc(
+  createStory: async (storyData: any) => {
+    const response = await axiosInstance.post(STORY_API_URL, storyData);
+    return response.data;
+  },
+
+  updateStory: async (storyId: string, storyData: any) => {
+    const response = await axiosInstance.put(
+      `${STORY_API_URL}/${storyId}`,
+      storyData
+    );
+    return response.data;
+  },
+
+  deleteStory: async (storyId: string) => {
+    const response = await axiosInstance.delete(`${STORY_API_URL}/${storyId}`);
+    return response.data;
+  },
+
+  // Story listing and filtering
+  getStoriesByFilter: async (
     options: { limit?: number; sort?: string } = {}
-  ): Promise<Story[]> {
-    const { limit = 5, sort = "newest" } = options;
-
-    try {
-      const response = await axiosInstance.get(`${STORY_API_URL}/list`, {
-        params: {
-
-          limit,
-          sortBy:
-            sort === "newest"
-              ? "newest"
-              : sort === "rating"
-              ? "rating"
-              : "oldest",
-        },
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error("Lỗi khi tải danh sách truyện:", error);
-      return [];
-    }
+  ): Promise<Story[]> => {
+    const { limit = 5, sort = SORT_OPTIONS.NEWEST } = options;
+    const response = await axiosInstance.get(`${STORY_API_URL}/list`, {
+      params: {
+        limit,
+        sortBy: sort,
+      },
+    });
+    return response.data.data; // Chỉ lấy mảng truyện từ 'data'
   },
 
-  async searchStories({
+  searchStories: async ({
     title,
     genres,
     sortBy,
+    page = 1, // Thêm page mặc định là 1
+    limit = 8, // Đặt limit mặc định là 8
   }: {
     title?: string;
     genres?: number[];
     sortBy?: string;
-  }): Promise<Story[]> {
-    try {
-      const queryParams = new URLSearchParams();
-      if (title) queryParams.append("title", title);
-      if (genres?.length) queryParams.append("genres", genres.join(","));
-      if (sortBy) queryParams.append("sortBy", sortBy);
+    page?: number;
+    limit?: number;
+  }): Promise<{ stories: Story[]; total: number }> => {
+    const queryParams = new URLSearchParams();
+    if (title) queryParams.append("title", title);
+    if (genres?.length) queryParams.append("genres", genres.join(","));
+    if (sortBy) queryParams.append("sortBy", sortBy);
+    queryParams.append("page", page.toString());
+    queryParams.append("limit", limit.toString());
 
-      const response = await axiosInstance.get(
-        `${STORY_API_URL}/list?${queryParams.toString()}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error searching stories:", error);
-      return [];
-    }
+    const response = await axiosInstance.get(
+      `${STORY_API_URL}/list?${queryParams.toString()}`
+    );
+    return {
+      stories: response.data.data,
+      total: response.data.pagination.total_items,
+    };
   },
 
-  async fetchGenres(): Promise<Genre[]> {
-    try {
-      const response = await axiosInstance.get(`${GENRE_API_URL}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching genres:", error);
-      return [];
-    }
+  // Genre operations
+  getAllGenres: async (): Promise<Genre[]> => {
+    const response = await axiosInstance.get(GENRE_API_URL);
+    return response.data;
   },
 
-  async getChapterDetail(storyId: string, chapterId: string) {
-    try {
-      const response = await axiosInstance.get(
-        `${STORY_API_URL}/${storyId}/chapter/${chapterId}`
-      );
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          error.response?.data?.message || "Không tìm thấy chapter."
-        );
-      }
-      throw new Error("Có lỗi không xác định.");
-    }
-  },
-
-  async getAllRatingsDESC(limit: number): Promise<Story[]> {
-    try {
-      const response = await axiosInstance.get(
-        `${STORY_API_URL}/top?limit=${limit}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách truyện:", error);
-      throw new Error("Không thể lấy danh sách truyện theo rating.");
-    }
-  },
-
-  async createStory(storyData: any) {
-    try {
-      const response = await axiosInstance.post(STORY_API_URL, storyData);
-      return response.data;
-    } catch (error) {
-      console.error("Error creating story:", error);
-      throw error;
-    }
-  },
-
-  async updateStory(storyId: string, storyData: any) {
-    try {
-      const response = await axiosInstance.put(
-        `${STORY_API_URL}/${storyId}`,
-        storyData
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error updating story:", error);
-      throw error;
-    }
-  },
-
-  async deleteStory(storyId: string) {
-    try {
-      const response = await axiosInstance.delete(
-        `${STORY_API_URL}/${storyId}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error deleting story:", error);
-      throw error;
-    }
+  // Chapter operations
+  getChapterById: async (storyId: string, chapterId: string) => {
+    const response = await axiosInstance.get(
+      `${STORY_API_URL}/${storyId}/chapter/${chapterId}`
+    );
+    return response.data;
   },
 };

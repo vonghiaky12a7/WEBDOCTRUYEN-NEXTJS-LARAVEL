@@ -1,6 +1,6 @@
 // models/comment.ts
 export interface Comment {
-  commentId?: string;
+  id: string;
   userId: string;
   storyId: string;
   content: string;

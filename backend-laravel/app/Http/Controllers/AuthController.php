@@ -15,6 +15,7 @@ use App\Models\PersonalRefreshToken;
 use App\Mail\ResetPasswordMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -225,5 +226,78 @@ class AuthController extends Controller
         return $status === Password::PASSWORD_RESET
             ? response()->json(['status' => __($status)], 200)
             : response()->json(['error' => __($status)], 400);
+    }
+
+    public function googleRedirect(Request $request)
+    {
+        // Tạo URL chuyển hướng đến Google
+        $redirectUrl = Socialite::driver('google')
+
+            ->redirect()
+            ->getTargetUrl();
+
+        return response()->json([
+            'message' => 'Redirect to Google login',
+            'redirect_url' => $redirectUrl,
+        ], 200);
+    }
+
+    /**
+     * Xử lý callback từ Google
+     */
+    public function googleCallback(Request $request)
+    {
+        try {
+            // Lấy thông tin người dùng từ Google
+            $googleUser = Socialite::driver('google')
+
+                ->user();
+
+            // Tìm hoặc tạo người dùng trong database
+            $user = User::updateOrCreate(
+                [
+                    'google_id' => $googleUser->id,
+                ],
+                [
+                    'name' => $googleUser->name,
+                    'email' => $googleUser->email,
+                    'google_id' => $googleUser->id,
+                    'password' => Hash::make(Str::random(16)), // Tạo mật khẩu ngẫu nhiên
+                ]
+            );
+
+            // Xóa các token cũ
+            $user->tokens()->delete();
+            PersonalRefreshToken::where('tokenable_id', $user->id)
+                ->where('tokenable_type', User::class)
+                ->delete();
+
+            // Tạo Access Token (15 phút)
+            $accessToken = $user->createToken('access_token', ['*'], now()->addMinutes(15))->plainTextToken;
+
+            // Tạo Refresh Token (7 ngày)
+            $refreshToken = Str::random(64);
+            PersonalRefreshToken::create([
+                'tokenable_id' => $user->id,
+                'tokenable_type' => User::class,
+                'token' => $refreshToken,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
+
+            return response()->json([
+                'message' => 'Đăng nhập bằng Google thành công!',
+                'user' => $user,
+            ])->cookie('access_token', $accessToken, 15)
+                ->cookie('refresh_token', $refreshToken, 60 * 24 * 7)
+                ->cookie('expires_at', $expiresAt, 15, null, null, false, false) // HttpOnly = false
+                ->cookie('role_id', $user->roleId, 15, null, null, false, false); // HttpOnly = false
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Đăng nhập bằng Google thất bại.',
+                'error' => $e->getMessage(),
+            ], 401);
+        }
     }
 }

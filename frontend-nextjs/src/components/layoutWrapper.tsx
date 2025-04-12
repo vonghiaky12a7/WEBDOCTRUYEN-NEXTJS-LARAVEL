@@ -13,25 +13,23 @@ export default function LayoutWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const {
-    isLogged,
-    checkAuthStatus,
-    refreshToken,
-    clearAuth,
-    getExpiresAt,
-  } = useAuthStore();
+  const { isLogged, checkAuthStatus, refreshToken, clearAuth, getExpiresAt } =
+    useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
   const isAdminPage = pathname?.startsWith("/admin");
 
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
-        await checkAuthStatus();
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        if (isAdminPage) {
-          router.push("/auth/signin");
+      // Chỉ kiểm tra trạng thái xác thực nếu đang ở trang admin hoặc đã đăng nhập
+      if (isAdminPage || isLogged) {
+        try {
+          await checkAuthStatus();
+        } catch (error) {
+          console.error("Auth check failed:", error);
+          if (isAdminPage) {
+            router.push("/auth/signin");
+          }
         }
       }
     };
@@ -79,7 +77,7 @@ export default function LayoutWrapper({
         clearTimeout(refreshInterval);
       }
     };
-  }, [isLogged, pathname]); // Chỉ phụ thuộc vào isLogged và pathname
+  }, [isLogged, pathname]);
 
   return (
     <>
