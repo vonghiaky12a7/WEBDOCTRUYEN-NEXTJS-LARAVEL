@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Chapter } from "@/models/chapter";
 import { ChapterService } from "@/services/chapterService";
 import { ImgService } from "@/services/imgService";
@@ -25,34 +25,42 @@ export default function EditChapterModal({
   const [chapterNumber, setChapterNumber] = useState<number | "">(
     chapter.chapterNumber
   );
-  const [imageUrls, setImageUrls] = useState<string[]>(
+  const [imageUrls] = useState<string[]>(
     Array.isArray(chapter.imageUrls) ? chapter.imageUrls : []
   );
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+  
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const files = event.target.files;
     if (!files) return;
   
-    setLoading(true);
-    try {
-      // Xóa toàn bộ ảnh cũ trước khi tải ảnh mới
-      setImageUrls([]);
+    // Thu hồi các URL tạm thời cũ
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
   
-      const uploadedUrls = await Promise.all(
-        Array.from(files).map((file) =>
-          ImgService.uploadChapterImage(file, storyName, Number(chapterNumber))
-        )
-      );
+    const newFiles = Array.from(files).filter((file) =>
+      validImageTypes.includes(file.type)
+    );
   
-      // Chỉ giữ ảnh mới
-      setImageUrls(uploadedUrls);
-    } catch (error) {
-      console.error("Lỗi khi tải ảnh lên:", error);
-    } finally {
-      setLoading(false);
+    if (newFiles.length === 0) {
+      alert("Không có file ảnh hợp lệ nào được chọn!");
+      return;
     }
+  
+    const newPreviewUrls = newFiles.map((file) => URL.createObjectURL(file));
+  
+    setImageFiles(newFiles); // Ghi đè mảng file cũ
+    setPreviewUrls(newPreviewUrls); // Ghi đè mảng URL tạm thời cũ
   }
+  
   
 
   async function handleSave() {
@@ -60,14 +68,27 @@ export default function EditChapterModal({
       alert("Vui lòng nhập số chương và tiêu đề.");
       return;
     }
+  
     setLoading(true);
     try {
+
+      for (const imageUrl of imageUrls) {
+        await ImgService.deleteImage(imageUrl);
+      }
+      
+      const updatedImageUrls = await ImgService.uploadChapterImages(
+        imageFiles,
+        storyName,
+        chapter.chapterNumber
+      );
+
+      // Cập nhật chương với danh sách ảnh mới
       await ChapterService.updateChapter(chapter.storyId, chapter.chapterId, {
         title,
         chapterNumber: Number(chapterNumber),
-        imageUrls,
+        imageUrls: updatedImageUrls,
       });
-      console.log("Danh sách ảnh sau khi cập nhật:", imageUrls);
+  
       onSave();
       onClose();
     } catch (error) {
@@ -76,7 +97,7 @@ export default function EditChapterModal({
       setLoading(false);
     }
   }
-
+  
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white p-6 rounded-md shadow-lg w-[700px] h-[600px] flex flex-col">
@@ -115,7 +136,7 @@ export default function EditChapterModal({
           </div>
 
           <div className="w-1/2 flex justify-center items-center border rounded-md overflow-hidden">
-            {imageUrls.length > 0 ? (
+          {(previewUrls.length > 0 ? previewUrls : imageUrls).length > 0 ? (
               <Swiper
                 modules={[Navigation, Pagination]}
                 spaceBetween={10}
@@ -124,7 +145,7 @@ export default function EditChapterModal({
                 pagination={{ clickable: true }}
                 className="w-full h-[300px]"
               >
-                {imageUrls.map((url, index) => (
+                {(previewUrls.length > 0 ? previewUrls : imageUrls).map((url, index) => (
                   <SwiperSlide key={index} className="flex justify-center items-center">
                     <img
                       src={url}

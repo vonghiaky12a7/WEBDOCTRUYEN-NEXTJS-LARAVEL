@@ -72,10 +72,12 @@ class ChapterController extends Controller
         $request->validate([
             'title' => 'string',
             'chapterNumber' => 'integer|min:1',
+            'imageUrls' => 'required|array',
         ]);
 
         if ($request->has('title')) $chapter->title = $request->title;
         if ($request->has('chapterNumber')) $chapter->chapterNumber = $request->chapterNumber;
+        if ($request->has('imageUrls')) $chapter->imageUrls = $request->imageUrls;
 
         $chapter->save();
 
