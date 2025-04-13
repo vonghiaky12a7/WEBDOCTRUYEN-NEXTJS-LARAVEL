@@ -9,11 +9,13 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { DEFAULT_AVATAR } from "@/constants/images";
 import { addToast } from "@heroui/react";
+
 import { User } from "@/models/user";
 
 interface AvatarProps {
   user: User | null; // Có thể thay bằng kiểu User nếu đã định nghĩa
 }
+
 
 export default function Avatar({ user }: AvatarProps) {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+
 const protectedRoutes = [
   { path: "/admin", allowedRoles: [1] },
   { path: "/profile", allowedRoles: [1, 3] },
@@ -44,8 +45,10 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
+  // Allow access if none of the above conditions are met
   return NextResponse.next();
 }
+
 
 export const config = {
   matcher: [

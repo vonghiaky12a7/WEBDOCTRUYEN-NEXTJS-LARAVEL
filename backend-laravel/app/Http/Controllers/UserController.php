@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+
     public function index(Request $request)
     {
+        // Không cần thay đổi logic, chỉ cần đảm bảo middleware auth:sanctum đã xác thực
         $users = User::all();
 
         return response()->json($users);
@@ -47,6 +49,7 @@ class UserController extends Controller
             'user' => $user
         ]);
     }
+
 
     public function destroy(Request $request, $id)
     {

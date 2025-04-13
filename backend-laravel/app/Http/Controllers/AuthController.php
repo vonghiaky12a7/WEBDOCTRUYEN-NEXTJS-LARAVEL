@@ -172,6 +172,7 @@ class AuthController extends Controller
         $expiresAt = now()->addMinutes(15)->timestamp * 1000; // Timestamp (ms) cho client
 
         return response()->json([
+
             'message' => 'Refresh token thành công',
             'user' => $user,
             'expires_in' => 900, // 15 phút tính bằng giây
@@ -181,7 +182,7 @@ class AuthController extends Controller
     }
 
 
-    // Gửi email reset password
+    // Gửi email reset password>>>>>>> kyvo
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate(['email' => 'required|email|exists:users,email']);
@@ -207,12 +208,12 @@ class AuthController extends Controller
     // Reset password
     public function resetPassword(Request $request)
     {
+
         $request->validate([
             'token' => 'required',
             'email' => 'required|email|exists:users,email',
             'password' => 'required|string|min:6|confirmed',
         ]);
-
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {

@@ -28,11 +28,13 @@ Route::middleware('auth:sanctum')->group(function () {
         function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
+
         }
     );
     Route::get('/reading-history', [ReadingProgressController::class, 'getReadingHistory']);
     Route::post('/reading-progress', [ReadingProgressController::class, 'updateProgress']);
     Route::get('/reading-progress/{storyId}', [ReadingProgressController::class, 'getProgress']);
+
 
     // User routes with admin middleware
     Route::middleware('admin')->prefix('users')->group(function () {
@@ -42,10 +44,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
+
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/upload/single', [UploadController::class, 'uploadSingleImage']);
     Route::post('/upload/multiple', [UploadController::class, 'uploadMultipleImages']);
+    Route::post('/upload/delete', [UploadController::class, 'deleteImage']);
 });
+
 
 // Public story routes with rate limiting
 Route::prefix('stories')->group(function () {

@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // services/readingProgressService.ts
-import debounce from "lodash.debounce";
 import axiosInstance from "@/utils/axiosInstance";
 
-interface ReadingProgressData {
+export interface ReadingProgressData {
   storyId: string;
   lastChapterId: string | null;
   lastPage: number;
@@ -38,18 +36,10 @@ export class ReadingProgressService {
     if (typeof window === "undefined") {
       return null;
     }
-    if (!ReadingProgressService.instance) {
-      ReadingProgressService.instance = new ReadingProgressService();
-    }
-    return ReadingProgressService.instance;
-  }
+  },
 
-  private getReadingState(): ReadingState {
-    const raw = localStorage.getItem("story_state");
-    return raw ? JSON.parse(raw) : {};
-  }
-
-  private saveReadingState(
+  // Gửi tiến độ đọc mới lên server
+  async createProgress(
     storyId: string,
     chapterId: string,
     page: number

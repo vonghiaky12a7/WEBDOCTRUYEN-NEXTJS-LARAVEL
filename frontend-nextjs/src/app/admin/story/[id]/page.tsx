@@ -34,13 +34,9 @@ export default function ChaptersPage() {
     setLoading(true);
     setError(null);
     try {
-      const storiesData = await StoryService.fetchStories();
-      const selectedStory = storiesData.find((s: Story) => s.storyId === id);
-      if (!selectedStory) {
-        setError("Truyện không tồn tại.");
-        return;
-      }
-      setStory(selectedStory);
+      const storiesData = await StoryService.getStoryById(id as string);
+      
+      setStory(storiesData);
       const chaptersData = await ChapterService.getChaptersByStory(id as string);
       setChapters(chaptersData);
     } catch (err) {

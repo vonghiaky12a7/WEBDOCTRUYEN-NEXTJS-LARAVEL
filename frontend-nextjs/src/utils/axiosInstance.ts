@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/axiosInstance.ts
+
 import axios, { AxiosError } from "axios";
 import { getCookie, setCookie } from "cookies-next";
 

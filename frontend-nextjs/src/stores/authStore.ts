@@ -2,7 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService } from "@/services/authService";
 import { User } from "@/models/user";
+
 import { deleteCookie, getCookie } from "cookies-next";
+
 
 interface AuthState {
   user: User | null;
@@ -33,9 +35,11 @@ export const useAuthStore = create<AuthState>()(
         deleteCookie("refresh_token");
         deleteCookie("expires_at");
         deleteCookie("role_id");
+
         localStorage.removeItem("auth-storage");
         set({ user: null, isLogged: false });
       },
+
 
       login: async (formData) => {
         const { user } = await authService.login(formData);
@@ -44,12 +48,14 @@ export const useAuthStore = create<AuthState>()(
 
       signup: async (formData) => {
         await authService.signup(formData);
+
       },
 
       logout: async () => {
         await authService.logout();
         get().clearAuth();
       },
+
 
       isTokenValid: async () => {
         const expiresAt = getCookie("expires_at");
