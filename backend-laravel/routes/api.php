@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/upload/single', [UploadController::class, 'uploadSingleImage']);
     Route::post('/upload/multiple', [UploadController::class, 'uploadMultipleImages']);
+    Route::post('/upload/delete', [UploadController::class, 'deleteImage']);
 });
 
 

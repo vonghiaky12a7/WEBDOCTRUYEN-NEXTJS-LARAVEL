@@ -31,8 +31,9 @@ export const ChapterService = {
   updateChapter: async (
     storyId: string,
     chapterId: string,
-    chapterData: any
+    chapterData: { title: string; chapterNumber: number; imageUrls: string[] }
   ) => {
+    console.log("Updating chapter with data:", chapterData); // Debug log
     const response = await axiosInstance.put(
       `${API_URL}/${storyId}/chapter/${chapterId}`,
       chapterData
