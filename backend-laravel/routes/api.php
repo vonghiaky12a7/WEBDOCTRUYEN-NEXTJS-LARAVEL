@@ -18,6 +18,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+    Route::post('/google', [AuthController::class, 'googleRedirect'])->name('google.redirect');
+    Route::get('/google/callback', [AuthController::class, 'googleCallback'])->name('google.callback');
 });
 
 
@@ -29,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         }
     );
+    Route::get('/reading-history', [ReadingProgressController::class, 'getReadingHistory']);
     Route::post('/reading-progress', [ReadingProgressController::class, 'updateProgress']);
     Route::get('/reading-progress/{storyId}', [ReadingProgressController::class, 'getProgress']);
 
@@ -50,7 +53,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
 
 // Public story routes with rate limiting
-Route::middleware(['throttle:60,1'])->prefix('stories')->group(function () {
+Route::prefix('stories')->group(function () {
     Route::get('/', [StoryController::class, 'index']);
     Route::get('/list', [StoryController::class, 'list']);
     Route::get('/top', [StoryController::class, 'top']);

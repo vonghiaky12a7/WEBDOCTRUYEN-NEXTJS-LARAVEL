@@ -231,9 +231,10 @@ class AuthController extends Controller
 
     public function googleRedirect(Request $request)
     {
-        // Tạo URL chuyển hướng đến Google
+        // Thiết lập lại scope cho Google
         $redirectUrl = Socialite::driver('google')
-
+            ->stateless()
+            ->setScopes(['email', 'profile']) // Thay đổi danh sách scope
             ->redirect()
             ->getTargetUrl();
 
@@ -243,15 +244,23 @@ class AuthController extends Controller
         ], 200);
     }
 
+
     /**
      * Xử lý callback từ Google
      */
     public function googleCallback(Request $request)
     {
+        \Log::info('googleCallback called with request type: ' . $request->method());
         try {
+            // Lấy code từ query string
+            $code = $request->query('code');
+            if (!$code) {
+                throw new \Exception('Code không được cung cấp trong query string.');
+            }
+
             // Lấy thông tin người dùng từ Google
             $googleUser = Socialite::driver('google')
-
+                ->stateless()
                 ->user();
 
             // Tìm hoặc tạo người dùng trong database
@@ -260,9 +269,9 @@ class AuthController extends Controller
                     'google_id' => $googleUser->id,
                 ],
                 [
-                    'name' => $googleUser->name,
+                    'username' => $googleUser->name,
                     'email' => $googleUser->email,
-                    'google_id' => $googleUser->id,
+                    'avatarPath' => $googleUser->avatar, // Lưu URL avatar từ Google
                     'password' => Hash::make(Str::random(16)), // Tạo mật khẩu ngẫu nhiên
                 ]
             );

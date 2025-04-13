@@ -66,4 +66,30 @@ class ReadingProgressController extends Controller
             'progress' => $progress
         ], 200);
     }
+
+    public function getReadingHistory(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Lấy tất cả tiến trình đọc của người dùng, sắp xếp theo lastReadAt giảm dần
+        $history = ReadingProgress::where('userId', $user->id)
+            ->with(['story']) // Lấy thông tin truyện liên quan
+            ->orderBy('lastReadAt', 'desc') // Sắp xếp theo thời gian đọc gần nhất
+            ->get();
+
+        if ($history->isEmpty()) {
+            return response()->json([
+                'message' => 'No reading history found',
+                'history' => []
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'Reading history retrieved successfully',
+            'history' => $history
+        ], 200);
+    }
 }
