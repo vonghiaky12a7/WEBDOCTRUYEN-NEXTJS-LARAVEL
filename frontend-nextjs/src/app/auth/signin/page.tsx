@@ -17,6 +17,7 @@ import { Formik, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { useAuthStore } from "@/stores/authStore";
 
+
 interface FormValues {
   email: string;
   password: string;
@@ -75,56 +76,41 @@ export default function Signin() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      const response = await fetch("/api/auth/google", {
+const handleGoogleLogin = async () => {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Assuming the backend returns tokens and a redirect URL
-        if (data.access_token && data.refresh_token && data.redirect_url) {
-          // Store tokens (example using localStorage - consider using cookies for better security)
-          localStorage.setItem("access_token", data.access_token);
-          localStorage.setItem("refresh_token", data.refresh_token);
-
-          // Redirect the user
-          window.location.href = data.redirect_url;
-        } else {
-          console.error("Invalid response from Google login API:", data);
-          addToast({
-            title: "Error",
-            description: "Google login failed. Please try again.",
-            color: "danger",
-            timeout: 2500,
-            shouldShowTimeoutProgress: true,
-          });
-        }
-      } else {
-        console.error("Google login API request failed:", response.status, response.statusText);
-        addToast({
-          title: "Error",
-          description: "Google login failed. Please try again.",
-          color: "danger",
-          timeout: 2500,
-          shouldShowTimeoutProgress: true,
-        });
       }
-    } catch (error) {
-      console.error("Error during Google login:", error);
-      addToast({
-        title: "Error",
-        description: "Google login failed. Please try again.",
-        color: "danger",
-        timeout: 2500,
-        shouldShowTimeoutProgress: true,
-      });
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url; // Chuyển hướng người dùng đến Google
+      } else {
+        throw new Error("Không nhận được URL chuyển hướng từ server");
+      }
+    } else {
+      throw new Error(
+        "Google login API request failed: " + response.statusText
+      );
     }
-  };
+  } catch (error) {
+    console.error("Error during Google login:", error);
+    addToast({
+      title: "Error",
+      description: "Google login failed. Please try again.",
+      color: "danger",
+      timeout: 2500,
+      shouldShowTimeoutProgress: true,
+    });
+  }
+};
 
   return (
     <div className="flex h-full w-full items-center justify-center">

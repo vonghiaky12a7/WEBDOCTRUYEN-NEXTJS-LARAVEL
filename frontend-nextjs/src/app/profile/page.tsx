@@ -8,6 +8,8 @@ import { Card, CardBody, Button, User, Tabs, Tab, Input } from "@heroui/react";
 import { Edit3, Settings, BookOpen, Star, Check, X } from "lucide-react";
 import axios from "axios";
 import Image from "next/image";
+import ReadingHistory from "@/components/ReadingHistory";
+import FavoriteArticles from "@/components/FavoriteArticles";
 
 export default function Profile() {
   const { user: authUser, isLogged } = useAuthStore();
@@ -297,33 +299,29 @@ export default function Profile() {
                 </div>
               </Tab>
               <Tab
-                key="reading"
+                key="readingHistory"
                 title={
                   <div className="flex items-center space-x-2">
                     <BookOpen size={18} />
-                    <span>Đang đọc</span>
+                    <span>Lịch sử đọc truyện</span>
                   </div>
                 }
               >
                 <div className="p-6">
-                  <p className="text-center text-muted-foreground">
-                    Chưa có truyện nào trong danh sách đang đọc
-                  </p>
+                  <ReadingHistory />
                 </div>
               </Tab>
               <Tab
-                key="favorites"
+                key="favoriteArticles"
                 title={
                   <div className="flex items-center space-x-2">
                     <Star size={18} />
-                    <span>Yêu thích</span>
+                    <span>Bài viết yêu thích</span>
                   </div>
                 }
               >
                 <div className="p-6">
-                  <p className="text-center text-muted-foreground">
-                    Chưa có truyện nào trong danh sách yêu thích
-                  </p>
+                  <FavoriteArticles />
                 </div>
               </Tab>
             </Tabs>

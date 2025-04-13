@@ -11,15 +11,14 @@ const TrendingStories: React.FC = () => {
   useEffect(() => {
     const fetchDataStories = async () => {
       try {
-        const topStories = await StoryService.getStoriesByFilter({
-          limit: 5,
-          sort: "rating",
-        });
+        // Sử dụng Promise.all để chạy đồng thời hai yêu cầu API
+        const [topStories, latestStories] = await Promise.all([
+          StoryService.getStoriesByFilter({ limit: 5, sort: "rating" }),
+          StoryService.getStoriesByFilter({ limit: 5, sort: "newest" }),
+        ]);
+
+        // Cập nhật state sau khi nhận được dữ liệu
         setTrendingStories(topStories);
-        const latestStories = await StoryService.getStoriesByFilter({
-          limit: 5,
-          sort: "newest",
-        });
         setNewStories(latestStories);
       } catch (error) {
         console.error("Lỗi khi lấy danh sách truyện:", error);

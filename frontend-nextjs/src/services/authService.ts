@@ -37,7 +37,7 @@ export const authService = {
 
   // Thêm phương thức để lấy URL đăng nhập Google
   googleLogin: async () => {
-    const response = await axiosInstance.get("/auth/google");
+    const response = await axiosInstance.post("/auth/google");
     return response.data;
   },
 };

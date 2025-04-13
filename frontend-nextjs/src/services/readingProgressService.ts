@@ -16,7 +16,7 @@ interface ReadingState {
 
 export class ReadingProgressService {
   private static instance: ReadingProgressService;
-  private debounceTime = 5000;
+  private debounceTime = 1000;
   private pendingUpdates: Map<string, ReadingProgressData> = new Map();
   private debouncedSave = debounce(async () => {
     if (this.pendingUpdates.size === 0) return;
@@ -27,7 +27,10 @@ export class ReadingProgressService {
 
   private constructor() {
     if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", this.handleBeforeUnload.bind(this));
+      window.addEventListener(
+        "beforeunload",
+        this.handleBeforeUnload.bind(this)
+      );
     }
   }
 
@@ -58,16 +61,13 @@ export class ReadingProgressService {
   }
 
   private async saveToApi(data: ReadingProgressData): Promise<void> {
-    const accessToken = (typeof window !== "undefined") ? (document.cookie.match(/access_token=([^;]+)/)?.[1] ?? null) : null;
-    const refreshToken = (typeof window !== "undefined") ? (document.cookie.match(/refresh_token=([^;]+)/)?.[1] ?? null) : null;
-
-    if (!accessToken || !refreshToken) {
-      console.warn("No access or refresh token, skip saving progress to API");
-      return;
+    try {
+      await axiosInstance.post("/reading-progress", data);
+    } catch (error) {
+      console.error("Failed to save reading progress:", error);
     }
-
-    await axiosInstance.post("/reading-progress", data);
   }
+
 
   public async getProgress(
     storyId: string
